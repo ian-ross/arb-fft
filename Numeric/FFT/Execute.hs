@@ -13,26 +13,25 @@ import Numeric.FFT.Base
 
 -- | Main FFT plan execution driver.
 execute :: Plan -> Direction -> VCD -> VCD
-execute (Plan wmap dlinfo perm base) dir xs =
-  if n == 1 then xs
-  else map ((scale :+ 0) *) $ if null dlinfo
-                              then applyBase wmap base sign xs
-                              else fullfft
+execute (Plan wmap dlinfo perm base) dir h =
+  if n == 1 then h else rescale $ if null dlinfo
+                                  then applyBase wmap base sign h
+                                  else fullfft
   where
-    n = length xs             -- Input vector length.
+    n = length h              -- Input vector length.
     bsize = baseSize base     -- Size of base transform.
 
-    -- Root of unity sign and output scale.
-    (sign, scale) = case dir of
-      Forward -> (1, 1.0)
-      Inverse -> (-1, 1.0 / fromIntegral n)
+    -- Root of unity sign and output rescaling.
+    (sign, rescale) = case dir of
+      Forward -> (1, id)
+      Inverse -> (-1, map ((1.0 / fromIntegral n :+ 0) *))
 
     -- Compose all Danielson-Lanczos steps and base transform.
     recomb = foldr (.) multBase $ map (dl wmap sign) dlinfo
 
     -- Apply Danielson-Lanczos steps and base transform to digit
     -- reversal ordered input vector.
-    fullfft = recomb $ backpermute xs perm
+    fullfft = recomb $ backpermute h perm
 
     -- Multiple base transform application for "bottom" of algorithm.
     multBase :: VCD -> VCD
@@ -42,7 +41,7 @@ execute (Plan wmap dlinfo perm base) dir xs =
 -- | Single Danielson-Lanczos step: process all duplicates and
 -- concatenate into a single vector.
 dl :: WMap -> Int -> (Int, Int) -> VCD -> VCD
-dl wmap sign (wfac, split) xs = concatMap doone $ slicevecs wfac xs
+dl wmap sign (wfac, split) h = concatMap doone $ slicevecs wfac h
   where
     -- Size of each diagonal sub-matrix.
     ns = wfac `div` split

@@ -8,6 +8,7 @@ module Numeric.FFT
        ( fft, ifft, fftWith, ifftWith
        , plan, execute
        , Plan (..), Direction (..), BaseTransform (..)
+       , VCD
        ) where
 
 import Prelude hiding (length)
