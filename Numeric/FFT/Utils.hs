@@ -1,6 +1,6 @@
 module Numeric.FFT.Utils
-       ( omega, slicevecs, primes, factors
-       , primitiveRoot, invModN
+       ( omega, slicevecs, primes, isPrime, factors
+       , primitiveRoot, invModN, log2
        ) where
 
 import Prelude hiding (all, dropWhile, enumFromTo, filter, head, length, map)
@@ -16,11 +16,9 @@ import Numeric.FFT.Types
 omega :: Int -> Complex Double
 omega n = cis (2 * pi / fromIntegral n)
 
-
 -- | Slice a vector @v@ into equally sized parts, each of length @m@.
 slicevecs :: Int -> VCD -> VVCD
 slicevecs m v = map (\i -> slice (i * m) m v) $ enumFromN 0 (length v `div` m)
-
 
 -- | Determine primitive roots modulo n.
 --
@@ -61,7 +59,6 @@ primitiveRoot p
     in fromIntegral $ head $ dropWhile (not . check) $ fromList [1..p-1]
   | otherwise = error "Attempt to take primitive root of non-prime value"
 
-
 -- | Fast exponentation modulo n by squaring.
 expt :: Int -> Int -> Int -> Int
 expt n b pow = fromIntegral $ go pow
@@ -73,11 +70,9 @@ expt n b pow = fromIntegral $ go pow
           | p `mod` 2 == 1 = (bb * go (p - 1)) `mod` nb
           | otherwise = let h = go (p `div` 2) in (h * h) `mod` nb
 
-
 -- | Find inverse element in multiplicative integer group modulo n.
 invModN :: Int -> Int -> Int
 invModN n g = head $ filter (\iv -> (g * iv) `mod` n == 1) $ enumFromTo 1 (n-1)
-
 
 -- | Prime sieve from Haskell wiki.
 primes :: Integral a => [a]
@@ -87,11 +82,9 @@ primes = 2 : primes'
           | x < q = x : sieve xs q ps
           | True  =     sieve [n | n <- xs, rem n p /= 0] (P.head t^2) t
 
-
 -- | Naive primality testing.
 isPrime :: Integral a => a -> Bool
 isPrime n = n `P.elem` P.takeWhile (<= n) primes
-
 
 -- | Simple prime factorisation.
 allFactors :: Integral a => a -> Vector a
@@ -100,7 +93,6 @@ allFactors n = fromList $ go n primes
           | cur == p         = [p]
           | cur `mod` p == 0 = p : go (cur `div` p) pss
           | otherwise        = go cur ps
-
 
 -- | Simple prime factorisation: small factors only; largest/last
 -- factor picked out as "special".
@@ -111,3 +103,8 @@ factors n = let (lst, rest) = go n primes in (lst, fromList rest)
           | cur `mod` p == 0 = let (lst, rest) = go (cur `div` p) pss
                                in (lst, p : rest)
           | otherwise        = go cur ps
+
+-- | Base-2 logarithm.
+log2 :: Int -> Int
+log2 1 = 0
+log2 n = 1 + log2 (n `div` 2)

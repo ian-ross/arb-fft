@@ -6,6 +6,8 @@ import Data.Complex
 import Data.Vector
 import qualified Data.IntMap.Strict as IM
 
+import Debug.Trace
+
 import Numeric.FFT.Types
 import Numeric.FFT.Utils
 import Numeric.FFT.Base
@@ -31,7 +33,9 @@ execute (Plan wmap dlinfo perm base) dir h =
 
     -- Apply Danielson-Lanczos steps and base transform to digit
     -- reversal ordered input vector.
-    fullfft = recomb $ backpermute h perm
+    fullfft = recomb $ case perm of
+      Nothing -> h
+      Just p -> backpermute h p
 
     -- Multiple base transform application for "bottom" of algorithm.
     multBase :: VCD -> VCD
