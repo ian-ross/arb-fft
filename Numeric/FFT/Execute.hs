@@ -1,16 +1,17 @@
 module Numeric.FFT.Execute ( execute ) where
 
-import Prelude hiding (concatMap, foldr, length, map, null, zipWith)
+import Prelude hiding (concatMap, foldr, length, map, null, sum, zip, zipWith)
 import qualified Prelude as P
 import Data.Complex
 import Data.Vector
 import qualified Data.IntMap.Strict as IM
+import qualified Data.Map as M
 
 import Debug.Trace
 
 import Numeric.FFT.Types
 import Numeric.FFT.Utils
-import Numeric.FFT.Base
+import Numeric.FFT.Special
 
 
 -- | Main FFT plan execution driver.
@@ -74,3 +75,45 @@ dl wmap sign (wfac, split) h = concatMap doone $ slicevecs wfac h
             -- elements in a single row.
             single :: Int -> VCD
             single r = foldl1' (zipWith (+)) $ map (mult r) $ enumFromN 0 split
+
+
+-- | Apply a base transform to a single vector.
+applyBase :: WMap -> BaseTransform -> Int -> VCD -> VCD
+
+-- Simple DFT algorithm.
+applyBase wmap (DFTBase sz) sign h = generate sz doone
+  where ws = wmap IM.! (sign * sz)
+        doone i = sum $ zipWith (*) h $
+                  generate sz (\k -> ws ! (i * k `mod` sz))
+
+-- Special hard-coded cases.
+applyBase _ (SpecialBase sz) sign h = case IM.lookup sz specialBases of
+  Just f -> f sign h
+  Nothing -> error "invalid problem size for SpecialBase"
+
+-- Rader prime-length FFT.
+applyBase wmap (RaderBase sz inperm outperm bfwd binv convsz convplan) sign h =
+  generate sz $ \i -> case i of
+    0 -> sum h
+    _ -> h ! 0 + convmap M.! i
+  where
+    -- Input values permuted according to group generator indexing.
+    as = backpermute h inperm
+
+    -- Padding size.
+    pad = convsz - (sz - 1)
+
+    -- Permuted input vector padded to next greater power of two size
+    -- for fast convolution.
+    apad = generate convsz $
+           \i -> if i == 0 then as ! 0
+                 else if i > pad then as ! (i - pad) else 0
+
+    -- FFT-based convolution calculation.
+    conv = execute convplan Inverse $
+           zipWith (*) (execute convplan Forward apad)
+                       (if sign == 1 then bfwd else binv)
+
+    -- Map constructed to enable inversion of inverse group generator
+    -- index ordering for output.
+    convmap = M.fromList $ toList $ zip outperm conv

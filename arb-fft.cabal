@@ -16,7 +16,6 @@ Library
   exposed-modules:  Numeric.FFT
   other-modules:    Numeric.FFT.Plan
                     Numeric.FFT.Execute
-                    Numeric.FFT.Base
                     Numeric.FFT.Special
                     Numeric.FFT.Types
                     Numeric.FFT.Utils
