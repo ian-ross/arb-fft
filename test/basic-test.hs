@@ -33,7 +33,7 @@ check v = let diff = defuzz $ zipWith (-) (fft v) (basicDFT v)
           in (maximum $ map magnitude diff, diff)
 
 -- QuickCheck property for FFT vs. DFT testing.
-prop_dft_vs_fft (v :: VCD) = trace (show $ length v) $ fst (check v) < 1.0E-6
+prop_dft_vs_fft (v :: VCD) = fst (check v) < 1.0E-6
 
 -- QuickCheck property for inverse FFT round-trip testing.
 prop_ifft (v :: VCD) = maximum (map magnitude diff) < 1.0E-6

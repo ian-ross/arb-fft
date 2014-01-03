@@ -9,7 +9,6 @@ module Numeric.FFT
        , plan, execute
        , Plan (..), Direction (..), BaseTransform (..)
        , VCD
-       , check, dft
        ) where
 
 import Prelude hiding (length, map, sum, zipWith)
@@ -36,16 +35,3 @@ fftWith p = execute p Forward
 -- | Inverse FFT with pre-computed plan.
 ifftWith :: Plan -> VCD -> VCD
 ifftWith p = execute p Inverse
-
-
-
-check :: VCD -> VCD
-check xs = map abs $ zipWith (-) (dft xs) (fft xs)
-
-omega n = cis (2 * pi / fromIntegral n)
-
-dft h = generate bigN doone
-  where bigN = length h
-        w = omega bigN
-        doone n = sum $
-                  zipWith (*) h $ generate bigN (\k -> w^^(n*k))
