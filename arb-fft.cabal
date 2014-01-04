@@ -19,6 +19,7 @@ Library
                     Numeric.FFT.Special
                     Numeric.FFT.Types
                     Numeric.FFT.Utils
+  ghc-options:      -O2
   build-depends:    base                        >= 4.6      && < 5,
                     containers                  >= 0.5.0.0  && < 0.6,
                     vector                      >= 0.10.9.1 && < 0.11
