@@ -8,7 +8,6 @@ module Numeric.FFT
        ( fft, ifft, fftWith, ifftWith
        , plan, execute
        , Plan (..), Direction (..), BaseTransform (..)
-       , VCD
        ) where
 
 import Prelude hiding (length, map, sum, zipWith)
@@ -21,17 +20,17 @@ import Numeric.FFT.Execute
 
 
 -- | Forward FFT with embedded plan calculation.
-fft :: VCD -> VCD
+fft :: Vector (Complex Double) -> Vector (Complex Double)
 fft xs = fftWith (plan $ length xs) xs
 
 -- | Inverse FFT with embedded plan calculation.
-ifft :: VCD -> VCD
+ifft :: Vector (Complex Double) -> Vector (Complex Double)
 ifft xs = ifftWith (plan $ length xs) xs
 
 -- | Forward FFT with pre-computed plan.
-fftWith :: Plan -> VCD -> VCD
-fftWith p = execute p Forward
+fftWith :: Plan -> Vector (Complex Double) -> Vector (Complex Double)
+fftWith p = convert . execute p Forward . convert
 
 -- | Inverse FFT with pre-computed plan.
-ifftWith :: Plan -> VCD -> VCD
-ifftWith p = execute p Inverse
+ifftWith :: Plan -> Vector (Complex Double) -> Vector (Complex Double)
+ifftWith p = convert . execute p Inverse . convert

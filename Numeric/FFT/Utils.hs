@@ -1,12 +1,14 @@
 module Numeric.FFT.Utils
-       ( omega, slicevecs, primes, isPrime, factors
+       ( omega, slicevecs, slicemvecs, primes, isPrime, factors
        , primitiveRoot, invModN, log2
        ) where
 
 import Prelude hiding (all, dropWhile, enumFromTo, filter, head, length, map)
 import qualified Prelude as P
 import Data.Complex
-import Data.Vector
+import Data.Vector.Unboxed
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed.Mutable as MV
 import Data.List (nub)
 
 import Numeric.FFT.Types
@@ -18,7 +20,14 @@ omega n = cis (2 * pi / fromIntegral n)
 
 -- | Slice a vector @v@ into equally sized parts, each of length @m@.
 slicevecs :: Int -> VCD -> VVCD
-slicevecs m v = map (\i -> slice (i * m) m v) $ enumFromN 0 (length v `div` m)
+slicevecs m v = V.map (\i -> slice (i * m) m v) $
+                V.enumFromN 0 (length v `div` m)
+
+-- | Slice a mutable vector @v@ into equally sized parts, each of
+-- length @m@.
+slicemvecs :: Int -> MVCD a -> VMVCD a
+slicemvecs m v = V.map (\i -> MV.slice (i * m) m v) $
+                 V.enumFromN 0 (MV.length v `div` m)
 
 -- | Determine primitive roots modulo n.
 --
@@ -87,7 +96,7 @@ isPrime :: Integral a => a -> Bool
 isPrime n = n `P.elem` P.takeWhile (<= n) primes
 
 -- | Simple prime factorisation.
-allFactors :: Integral a => a -> Vector a
+allFactors :: (Integral a, Unbox a) => a -> Vector a
 allFactors n = fromList $ go n primes
   where go cur pss@(p:ps)
           | cur == p         = [p]
@@ -96,7 +105,7 @@ allFactors n = fromList $ go n primes
 
 -- | Simple prime factorisation: small factors only; largest/last
 -- factor picked out as "special".
-factors :: Integral a => a -> (a, Vector a)
+factors :: (Integral a, Unbox a) => a -> (a, Vector a)
 factors n = let (lst, rest) = go n primes in (lst, fromList rest)
   where go cur pss@(p:ps)
           | cur == p         = (p, [])

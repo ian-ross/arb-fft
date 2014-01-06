@@ -5,7 +5,8 @@ import Prelude hiding (concatMap, enumFromTo, length, map, null, reverse,
 import qualified Prelude as P
 import qualified Data.IntMap.Strict as IM
 import Data.List (nub)
-import Data.Vector
+import qualified Data.Vector as V
+import Data.Vector.Unboxed
 
 import Numeric.FFT.Types
 import Numeric.FFT.Execute
@@ -25,7 +26,20 @@ plan n = Plan wmap dlinfo perm base
 
     -- Size information for Danielson-Lanczos steps.
     wfacs = map (n `div`) $ scanl (*) 1 fs
-    dlinfo = zip wfacs fs
+    vwfacs = convert wfacs
+    vfs = convert fs
+    dmatps = V.zipWith (dmat 1) vwfacs vfs
+    dmatms = V.zipWith (dmat (-1)) vwfacs vfs
+    dlinfo = V.reverse $ V.zip4 vwfacs vfs dmatps dmatms
+
+    -- Calculate diagonal matrix entries used in Danielson-Lanczos steps.
+    dmat :: Int -> Int -> Int -> VVVCD
+    dmat sign wfac split =
+      let ns = wfac `div` split
+          w = omega $ sign * wfac
+      in V.generate split $
+         \r -> V.generate split $
+           \c -> map (w^(ns*r*c) *) $ map ((w^^) . (c *)) $ enumFromN 0 ns
 
     -- Base transform.
     base = makeBase lastf
@@ -59,14 +73,16 @@ makeWMap ss = IM.fromList $ P.concatMap wvec $ nub $ toList ss
 digrev :: Int -> VI -> Maybe VI
 digrev n fs
   | null fs   = Nothing
-  | otherwise = Just $ foldl1' (%.%) $ map dupperm subperms
+  | otherwise = Just $ V.foldl1' (%.%) $ V.map dupperm subperms
   where
+    vfs = convert fs
+
     -- Sizes of the individual permutations that we need, one per
     -- factor.
-    sizes = scanl div n fs
+    sizes = V.scanl div n vfs
 
     -- Partial sub-permutations, one per factor.
-    subperms = reverse $ zipWith perm sizes fs
+    subperms = V.reverse $ V.zipWith perm sizes vfs
 
     -- Duplicate a sub-permutation to fill the required vector length.
     dupperm p =

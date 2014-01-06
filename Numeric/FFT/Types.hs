@@ -1,16 +1,21 @@
 module Numeric.FFT.Types
-       ( VCD, VVCD, VI, WMap
+       ( VCD, MVCD, VVCD, VMVCD, VVVCD, VI, WMap
        , Direction (..), Plan (..), BaseTransform (..)
        ) where
 
 import Data.IntMap.Strict (IntMap)
-import Data.Vector
+import Data.Vector.Unboxed
+import qualified Data.Vector as V
+import qualified Data.Vector.Unboxed.Mutable as MV
 import Data.Complex
 
 
 -- | Some useful type synonyms.
 type VCD = Vector (Complex Double)
-type VVCD = Vector (Vector (Complex Double))
+type MVCD s = MV.MVector s (Complex Double)
+type VVCD = V.Vector VCD
+type VVVCD = V.Vector (V.Vector VCD)
+type VMVCD a = V.Vector (MVCD a)
 type VI = Vector Int
 type WMap = IntMap VCD
 
@@ -24,9 +29,10 @@ data Direction = Forward | Inverse deriving (Eq, Show)
 data Plan = Plan { plWMap :: WMap
                    -- ^ Powers of roots of unity: @plWMap IM.! n@ is a
                    -- vector of values of @omega_n^i@ for @0 <= i < n@.
-                 , plDLInfo :: Vector (Int, Int)
-                   -- ^ Size information for Danielson-Lanczos
-                   -- recursive decomposition of problem size.
+                 , plDLInfo :: V.Vector (Int, Int, VVVCD, VVVCD)
+                   -- ^ Size information and diagonal matrix entries
+                   -- for Danielson-Lanczos recursive decomposition of
+                   -- problem size.
                  , plPermute :: Maybe VI
                    -- ^ Input vector permutation to use before base
                    -- transformation and recursive Danielson-Lanczos
