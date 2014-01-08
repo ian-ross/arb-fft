@@ -14,7 +14,7 @@ import Data.Complex
 type VCD = Vector (Complex Double)
 type MVCD s = MV.MVector s (Complex Double)
 type VVCD = V.Vector VCD
-type VVVCD = V.Vector (V.Vector VCD)
+type VVVCD = V.Vector VVCD
 type VMVCD a = V.Vector (MVCD a)
 type VI = Vector Int
 type WMap = IntMap VCD
