@@ -24,9 +24,9 @@ execute (Plan dlinfo perm base) dir h =
   if n == 1 then h else rescale $
                         if V.null dlinfo
                         then runST $ do
-                          mhin <- thaw $ case perm of
-                            Nothing -> h
-                            Just p -> backpermute h p
+                          mhin <- case perm of
+                            Nothing -> thaw h
+                            Just p -> unsafeThaw $ backpermute h p
                           mhout <- MV.replicate n 0
                           applyBase base sign mhin mhout
                           unsafeFreeze mhout
@@ -43,9 +43,9 @@ execute (Plan dlinfo perm base) dir h =
     -- Apply Danielson-Lanczos steps and base transform to digit
     -- reversal ordered input vector.
     fullfft = runST $ do
-      mhin <- thaw $ case perm of
-            Nothing -> h
-            Just p -> backpermute h p
+      mhin <- case perm of
+            Nothing -> thaw h
+            Just p -> unsafeThaw $ backpermute h p
       mhtmp <- MV.replicate n 0
       multBase mhin mhtmp
       mhr <- newSTRef (mhtmp, mhin)
@@ -92,9 +92,9 @@ dl sign (wfac, split, dmatp, dmatm) mhin mhout =
           let vi = vins V.! c
               dvals = d r c
           forM_ (enumFromN 0 ns) $ \i -> do
-            xi <- MV.read vi i
-            xo <- if first then return 0 else MV.read vo i
-            MV.write vo i (xo + xi * dvals ! i)
+            xi <- MV.unsafeRead vi i
+            xo <- if first then return 0 else MV.unsafeRead vo i
+            MV.unsafeWrite vo i (xo + xi * dvals ! i)
         -- Multiply all blocks by the corresponding diagonal
         -- elements in a single row.
         single :: (VMVCD s, VMVCD s) -> Int -> ST s ()
@@ -111,7 +111,7 @@ applyBase :: BaseTransform -> Int -> MVCD s -> MVCD s -> ST s ()
 -- Simple DFT algorithm.
 applyBase (DFTBase sz wsfwd wsinv) sign mhin mhout = do
   h <- freeze mhin
-  forM_ (enumFromN 0 sz) $ \i -> MV.write mhout i (doone h i)
+  forM_ (enumFromN 0 sz) $ \i -> MV.unsafeWrite mhout i (doone h i)
   where ws = if sign == 1 then wsfwd else wsinv
         doone h i = sum $ zipWith (*) h $
                     generate sz (\k -> ws ! (i * k `mod` sz))
@@ -123,30 +123,37 @@ applyBase (SpecialBase sz) sign mhin mhout =
     Nothing -> error "invalid problem size for SpecialBase"
 
 -- Rader prime-length FFT.
-applyBase rader sign mhin mhout = do
-  h <- freeze mhin
-  let tmp = raderWork rader sign h
-  forM_ (enumFromN 0 (length h)) $ \i -> MV.write mhout i (tmp ! i)
+applyBase (RaderBase sz outperm bfwd binv convsz convplan) sign mhin mhout = do
+  -- Padding size.
+  let pad = convsz - (sz - 1)
 
-raderWork (RaderBase sz outperm bfwd binv convsz convplan) sign h =
-  generate sz $ \i -> case i of
-    0 -> sum h
-    _ -> h ! 0 + convmap M.! i
-  where
-    -- Padding size.
-    pad = convsz - (sz - 1)
+  -- Permuted input vector padded to next greater power of two size
+  -- for fast convolution.
+  apad <- MV.replicate convsz 0
+  forM_ (enumFromN 0 convsz) $ \i -> do
+    val <- if i == 0 then MV.unsafeRead mhin 1
+           else if i > pad
+                then MV.unsafeRead mhin $ i - pad + 1
+                else return 0
+    MV.unsafeWrite apad i val
 
-    -- Permuted input vector padded to next greater power of two size
-    -- for fast convolution.
-    apad = generate convsz $
-           \i -> if i == 0 then h ! 1
-                 else if i > pad then h ! (i - pad + 1) else 0
+  -- FFT-based convolution calculation.
+  apadfr <- unsafeFreeze apad
+  let conv = execute convplan Inverse $
+             zipWith (*) (execute convplan Forward apadfr)
+                         (if sign == 1 then bfwd else binv)
 
-    -- FFT-based convolution calculation.
-    conv = execute convplan Inverse $
-           zipWith (*) (execute convplan Forward apad)
-                       (if sign == 1 then bfwd else binv)
+  -- Input vector sum.
+  sumhref <- newSTRef 0
+  forM_ (enumFromN 0 sz) $ \i -> do
+    val <- MV.unsafeRead mhin i
+    modifySTRef sumhref (+ val)
+  sumh <- readSTRef sumhref
 
-    -- Map constructed to enable inversion of inverse group generator
-    -- index ordering for output.
-    convmap = M.fromList $ toList $ zip outperm conv
+  -- Write output based on output generator index ordering.
+  h0 <- MV.unsafeRead mhin 0
+  forM_ (enumFromN 0 sz) $ \i -> do
+    let (idx, val) = case i of
+          0 -> (0, sumh)
+          _ -> (outperm ! (i - 1), h0 + conv ! (i - 1))
+    MV.unsafeWrite mhout idx val

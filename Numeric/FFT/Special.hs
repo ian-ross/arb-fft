@@ -26,10 +26,10 @@ specialBases = IM.fromList [ (2, special2)
 -- | Length 2 hard-coded FFT.
 special2 :: Int -> MVCD s -> MVCD s -> ST s ()
 special2 _ xsin xsout = do
-  a <- MV.read xsin 0
-  b <- MV.read xsin 1
-  MV.write xsout 0 $ a + b
-  MV.write xsout 1 $ a - b
+  a <- MV.unsafeRead xsin 0
+  b <- MV.unsafeRead xsin 1
+  MV.unsafeWrite xsout 0 $ a + b
+  MV.unsafeWrite xsout 1 $ a - b
 
 -- | Length 3 hard-coded FFT.
 kp500000000, kp866025403 :: Double
@@ -37,17 +37,17 @@ kp866025403 = 0.866025403784438646763723170752936183471402627
 kp500000000 = 0.500000000000000000000000000000000000000000000
 special3 :: Int -> MVCD s -> MVCD s -> ST s ()
 special3 sign xsin xsout = do
-  xr0 :+ xi0 <- MV.read xsin 0 ; xr1 :+ xi1 <- MV.read xsin 1
-  xr2 :+ xi2 <- MV.read xsin 2
+  xr0 :+ xi0 <- MV.unsafeRead xsin 0 ; xr1 :+ xi1 <- MV.unsafeRead xsin 1
+  xr2 :+ xi2 <- MV.unsafeRead xsin 2
   let rp = xr1 + xr2 ; rm = xr1 - xr2
       ip = xi1 + xi2 ; im = xi1 - xi2
       tr = xr0 - kp500000000 * rp
       ti = xi0 - kp500000000 * ip
       r1 = (tr - kp866025403 * im) :+ (ti + kp866025403 * rm)
       r2 = (tr + kp866025403 * im) :+ (ti - kp866025403 * rm)
-  MV.write xsout 0 $ (xr0 + rp) :+ (xi0 + ip)
-  MV.write xsout 1 $ if sign == 1 then r1 else r2
-  MV.write xsout 2 $ if sign == 1 then r2 else r1
+  MV.unsafeWrite xsout 0 $ (xr0 + rp) :+ (xi0 + ip)
+  MV.unsafeWrite xsout 1 $ if sign == 1 then r1 else r2
+  MV.unsafeWrite xsout 2 $ if sign == 1 then r2 else r1
 
 -- | Length 5 hard-coded FFT.
 kp951056516, kp559016994, kp250000000, kp618033988 :: Double
@@ -57,9 +57,9 @@ kp250000000 = 0.250000000000000000000000000000000000000000000
 kp618033988 = 0.618033988749894848204586834365638117720309180
 special5 :: Int -> MVCD s -> MVCD s -> ST s ()
 special5 sign xsin xsout = do
-  xr0 :+ xi0 <- MV.read xsin 0 ; xr1 :+ xi1 <- MV.read xsin 1
-  xr2 :+ xi2 <- MV.read xsin 2 ; xr3 :+ xi3 <- MV.read xsin 3
-  xr4 :+ xi4 <- MV.read xsin 4
+  xr0 :+ xi0 <- MV.unsafeRead xsin 0 ; xr1 :+ xi1 <- MV.unsafeRead xsin 1
+  xr2 :+ xi2 <- MV.unsafeRead xsin 2 ; xr3 :+ xi3 <- MV.unsafeRead xsin 3
+  xr4 :+ xi4 <- MV.unsafeRead xsin 4
   let ts = xr1 - xr4 ; t4 = xr1 + xr4 ; tt = xr2 - xr3 ; t7 = xr2 + xr3
       t8 = t4 + t7 ; ta = t4 - t7 ; te = xi1 - xi4 ; tm = xi1 + xi4
       tn = xi2 + xi3 ; th = xi2 - xi3 ; to = tm + tn ; tq = tm - tn
@@ -72,11 +72,11 @@ special5 sign xsin xsout = do
       r3 = (tj - kp951056516 * tk) :+ (tv + kp951056516 * tw)
       r2 = (tj + kp951056516 * tk) :+ (tv - kp951056516 * tw)
       r1 = (tb - kp951056516 * ti) :+ (tr + kp951056516 * tu)
-  MV.write xsout 0 $ (xr0 + t8) :+ (xi0 + to)
-  MV.write xsout 1 $ if sign == 1 then r1 else r4
-  MV.write xsout 2 $ if sign == 1 then r2 else r3
-  MV.write xsout 3 $ if sign == 1 then r3 else r2
-  MV.write xsout 4 $ if sign == 1 then r4 else r1
+  MV.unsafeWrite xsout 0 $ (xr0 + t8) :+ (xi0 + to)
+  MV.unsafeWrite xsout 1 $ if sign == 1 then r1 else r4
+  MV.unsafeWrite xsout 2 $ if sign == 1 then r2 else r3
+  MV.unsafeWrite xsout 3 $ if sign == 1 then r3 else r2
+  MV.unsafeWrite xsout 4 $ if sign == 1 then r4 else r1
 
 -- | Length 7 hard-coded FFT.
 kp974927912, kp900968867, kp801937735 :: Double
@@ -89,10 +89,10 @@ kp356895867 = 0.356895867892209443894399510021300583399127187
 kp554958132 = 0.554958132087371191422194871006410481067288862
 special7 :: Int -> MVCD s -> MVCD s -> ST s ()
 special7 sign xsin xsout = do
-  xr0 :+ xi0 <- MV.read xsin 0 ; xr1 :+ xi1 <- MV.read xsin 1
-  xr2 :+ xi2 <- MV.read xsin 2 ; xr3 :+ xi3 <- MV.read xsin 3
-  xr4 :+ xi4 <- MV.read xsin 4 ; xr5 :+ xi5 <- MV.read xsin 5
-  xr6 :+ xi6 <- MV.read xsin 6
+  xr0 :+ xi0 <- MV.unsafeRead xsin 0 ; xr1 :+ xi1 <- MV.unsafeRead xsin 1
+  xr2 :+ xi2 <- MV.unsafeRead xsin 2 ; xr3 :+ xi3 <- MV.unsafeRead xsin 3
+  xr4 :+ xi4 <- MV.unsafeRead xsin 4 ; xr5 :+ xi5 <- MV.unsafeRead xsin 5
+  xr6 :+ xi6 <- MV.unsafeRead xsin 6
   let tI = xr6 - xr1 ; t4 = xr1 + xr6 ; tG = xr4 - xr3 ; ta = xr3 + xr4
       tT = tI + kp554958132 * tG ; tp = ta - kp356895867 * t4
       tH = xr5 - xr2 ; t7 = xr2 + xr5
@@ -118,13 +118,13 @@ special7 sign xsin xsout = do
       r3 = (tw - kp974927912 * ty) :+ (tF - kp974927912 * tK)
       r2 = (tr - kp974927912 * tt) :+ (tN - kp974927912 * tP)
       r1 = (td - kp974927912 * to) :+ (tS - kp974927912 * tU)
-  MV.write xsout 0 $ (xr0 + t4 + t7 + ta) :+ (xi0 + tA + tB + tC)
-  MV.write xsout 1 $ if sign == 1 then r1 else r6
-  MV.write xsout 2 $ if sign == 1 then r2 else r5
-  MV.write xsout 3 $ if sign == 1 then r3 else r4
-  MV.write xsout 4 $ if sign == 1 then r4 else r3
-  MV.write xsout 5 $ if sign == 1 then r5 else r2
-  MV.write xsout 6 $ if sign == 1 then r6 else r1
+  MV.unsafeWrite xsout 0 $ (xr0 + t4 + t7 + ta) :+ (xi0 + tA + tB + tC)
+  MV.unsafeWrite xsout 1 $ if sign == 1 then r1 else r6
+  MV.unsafeWrite xsout 2 $ if sign == 1 then r2 else r5
+  MV.unsafeWrite xsout 3 $ if sign == 1 then r3 else r4
+  MV.unsafeWrite xsout 4 $ if sign == 1 then r4 else r3
+  MV.unsafeWrite xsout 5 $ if sign == 1 then r5 else r2
+  MV.unsafeWrite xsout 6 $ if sign == 1 then r6 else r1
 
 -- | Length 11 hard-coded FFT.
 kp989821441, kp959492973, kp918985947, kp876768831, kp830830026 :: Double
@@ -141,12 +141,12 @@ kp342584725 = 0.342584725681637509502641509861112333758894680
 kp521108558 = 0.521108558113202722944698153526659300680427422
 special11 :: Int -> MVCD s -> MVCD s -> ST s ()
 special11 sign xsin xsout = do
-  xr0 :+ xi0 <- MV.read xsin 0 ; xr1 :+ xi1 <- MV.read xsin 1
-  xr2 :+ xi2 <- MV.read xsin 2 ; xr3 :+ xi3 <- MV.read xsin 3
-  xr4 :+ xi4 <- MV.read xsin 4 ; xr5 :+ xi5 <- MV.read xsin 5
-  xr6 :+ xi6 <- MV.read xsin 6 ; xr7 :+ xi7 <- MV.read xsin 7
-  xr8 :+ xi8 <- MV.read xsin 8 ; xr9 :+ xi9 <- MV.read xsin 9
-  xr10 :+ xi10 <- MV.read xsin 10
+  xr0 :+ xi0 <- MV.unsafeRead xsin 0 ; xr1 :+ xi1 <- MV.unsafeRead xsin 1
+  xr2 :+ xi2 <- MV.unsafeRead xsin 2 ; xr3 :+ xi3 <- MV.unsafeRead xsin 3
+  xr4 :+ xi4 <- MV.unsafeRead xsin 4 ; xr5 :+ xi5 <- MV.unsafeRead xsin 5
+  xr6 :+ xi6 <- MV.unsafeRead xsin 6 ; xr7 :+ xi7 <- MV.unsafeRead xsin 7
+  xr8 :+ xi8 <- MV.unsafeRead xsin 8 ; xr9 :+ xi9 <- MV.unsafeRead xsin 9
+  xr10 :+ xi10 <- MV.unsafeRead xsin 10
   let t1u = xr10 - xr1 ; t4 = xr1 + xr10 ; t1q = xr6 - xr5 ; tg = xr5 + xr6;
       t1t = xr9 - xr2 ; t7 = xr2 + xr9 ; t1s = xr8 - xr3 ; ta = xr3 + xr8;
       t25 = t1u + kp521108558 * t1q ; t1W = t1q + kp521108558 * t1s
@@ -208,17 +208,17 @@ special11 sign xsin xsout = do
       r3 = (tS - kp989821441 * tW) :+ (t1M - kp989821441 * t1Q)
       r2 = (tJ + kp989821441 * tN) :+ (t1V + kp989821441 * t1Z)
       r1 = (tl - kp989821441 * tE) :+ (t24 - kp989821441 * t28)
-  MV.write xsout 0 $ (xr0+t4+t7+ta+td+tg) :+ (xi0+t1g+t1h+t1i+t1j+t1k)
-  MV.write xsout 1 $ if sign == 1 then r1 else r10
-  MV.write xsout 2 $ if sign == 1 then r2 else r9
-  MV.write xsout 3 $ if sign == 1 then r3 else r8
-  MV.write xsout 4 $ if sign == 1 then r4 else r7
-  MV.write xsout 5 $ if sign == 1 then r5 else r6
-  MV.write xsout 6 $ if sign == 1 then r6 else r5
-  MV.write xsout 7 $ if sign == 1 then r7 else r4
-  MV.write xsout 8 $ if sign == 1 then r8 else r3
-  MV.write xsout 9 $ if sign == 1 then r9 else r2
-  MV.write xsout 10 $ if sign == 1 then r10 else r1
+  MV.unsafeWrite xsout 0 $ (xr0+t4+t7+ta+td+tg) :+ (xi0+t1g+t1h+t1i+t1j+t1k)
+  MV.unsafeWrite xsout 1 $ if sign == 1 then r1 else r10
+  MV.unsafeWrite xsout 2 $ if sign == 1 then r2 else r9
+  MV.unsafeWrite xsout 3 $ if sign == 1 then r3 else r8
+  MV.unsafeWrite xsout 4 $ if sign == 1 then r4 else r7
+  MV.unsafeWrite xsout 5 $ if sign == 1 then r5 else r6
+  MV.unsafeWrite xsout 6 $ if sign == 1 then r6 else r5
+  MV.unsafeWrite xsout 7 $ if sign == 1 then r7 else r4
+  MV.unsafeWrite xsout 8 $ if sign == 1 then r8 else r3
+  MV.unsafeWrite xsout 9 $ if sign == 1 then r9 else r2
+  MV.unsafeWrite xsout 10 $ if sign == 1 then r10 else r1
 
 -- | Length 13 hard-coded FFT.
 
