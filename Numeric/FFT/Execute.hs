@@ -20,13 +20,15 @@ import Numeric.FFT.Special
 
 -- | Main FFT plan execution driver.
 execute :: Plan -> Direction -> VCD -> VCD
-execute (Plan wmap dlinfo perm base) dir h =
+execute (Plan dlinfo perm base) dir h =
   if n == 1 then h else rescale $
                         if V.null dlinfo
                         then runST $ do
-                          mhin <- thaw h
+                          mhin <- thaw $ case perm of
+                            Nothing -> h
+                            Just p -> backpermute h p
                           mhout <- MV.replicate n 0
-                          applyBase wmap base sign mhin mhout
+                          applyBase base sign mhin mhout
                           unsafeFreeze mhout
                         else fullfft
   where
@@ -49,7 +51,7 @@ execute (Plan wmap dlinfo perm base) dir h =
       mhr <- newSTRef (mhtmp, mhin)
       V.forM_ dlinfo $ \dlstep -> do
         (mh0, mh1) <- readSTRef mhr
-        dl wmap sign dlstep mh0 mh1
+        dl sign dlstep mh0 mh1
         writeSTRef mhr (mh1, mh0)
       mhs <- readSTRef mhr
       unsafeFreeze $ fst mhs
@@ -57,14 +59,14 @@ execute (Plan wmap dlinfo perm base) dir h =
     -- Multiple base transform application for "bottom" of algorithm.
     multBase :: MVCD s -> MVCD s -> ST s ()
     multBase xmin xmout =
-      V.zipWithM_ (applyBase wmap base sign)
+      V.zipWithM_ (applyBase base sign)
                   (slicemvecs bsize xmin) (slicemvecs bsize xmout)
 
 
 -- | Single Danielson-Lanczos step: process all duplicates and
 -- concatenate into a single vector.
-dl :: WMap -> Int -> (Int, Int, VVVCD, VVVCD) -> MVCD s -> MVCD s -> ST s ()
-dl wmap sign (wfac, split, dmatp, dmatm) mhin mhout =
+dl :: Int -> (Int, Int, VVVCD, VVVCD) -> MVCD s -> MVCD s -> ST s ()
+dl sign (wfac, split, dmatp, dmatm) mhin mhout =
   V.zipWithM_ doone (slicemvecs wfac mhin) (slicemvecs wfac mhout)
   where
     -- Twiddled diagonal entries in row r, column c (both
@@ -104,44 +106,41 @@ dl wmap sign (wfac, split, dmatp, dmatm) mhin mhout =
 
 
 -- | Apply a base transform to a single vector.
-applyBase :: WMap -> BaseTransform -> Int -> MVCD s -> MVCD s -> ST s ()
+applyBase :: BaseTransform -> Int -> MVCD s -> MVCD s -> ST s ()
 
 -- Simple DFT algorithm.
-applyBase wmap (DFTBase sz) sign mhin mhout = do
+applyBase (DFTBase sz wsfwd wsinv) sign mhin mhout = do
   h <- freeze mhin
   forM_ (enumFromN 0 sz) $ \i -> MV.write mhout i (doone h i)
-  where ws = wmap IM.! (sign * sz)
+  where ws = if sign == 1 then wsfwd else wsinv
         doone h i = sum $ zipWith (*) h $
                     generate sz (\k -> ws ! (i * k `mod` sz))
 
 -- Special hard-coded cases.
-applyBase _ (SpecialBase sz) sign mhin mhout =
+applyBase (SpecialBase sz) sign mhin mhout =
   case IM.lookup sz specialBases of
     Just f -> f sign mhin mhout
     Nothing -> error "invalid problem size for SpecialBase"
 
 -- Rader prime-length FFT.
-applyBase wmap rader sign mhin mhout = do
+applyBase rader sign mhin mhout = do
   h <- freeze mhin
-  let tmp = raderWork wmap rader sign h
+  let tmp = raderWork rader sign h
   forM_ (enumFromN 0 (length h)) $ \i -> MV.write mhout i (tmp ! i)
 
-raderWork wmap (RaderBase sz inperm outperm bfwd binv convsz convplan) sign h =
+raderWork (RaderBase sz outperm bfwd binv convsz convplan) sign h =
   generate sz $ \i -> case i of
     0 -> sum h
     _ -> h ! 0 + convmap M.! i
   where
-    -- Input values permuted according to group generator indexing.
-    as = backpermute h inperm
-
     -- Padding size.
     pad = convsz - (sz - 1)
 
     -- Permuted input vector padded to next greater power of two size
     -- for fast convolution.
     apad = generate convsz $
-           \i -> if i == 0 then as ! 0
-                 else if i > pad then as ! (i - pad) else 0
+           \i -> if i == 0 then h ! 1
+                 else if i > pad then h ! (i - pad + 1) else 0
 
     -- FFT-based convolution calculation.
     conv = execute convplan Inverse $

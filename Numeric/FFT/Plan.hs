@@ -16,13 +16,20 @@ import Numeric.FFT.Special
 
 -- | Plan calculation for a given problem size.
 plan :: Int -> Plan
-plan n = Plan wmap dlinfo perm base
+plan n = Plan dlinfo perm base
   where
     -- Factorise input vector length.
     (lastf, fs) = factors n
 
     -- Input data "digit reversal" permutation.
-    perm = digrev n fs
+    digperm = digrev n fs
+
+    -- Include permutation of base transform if needed.
+    perm = case (digperm, mextraperm) of
+      (Just dp, Just ep) -> Just $ dupperm n ep %.% dp
+      (Nothing, Just ep) -> Just $ dupperm n ep
+      (Just dp, Nothing) -> Just dp
+      (Nothing, Nothing) -> Nothing
 
     -- Size information for Danielson-Lanczos steps.
     wfacs = map (n `div`) $ scanl (*) 1 fs
@@ -42,29 +49,14 @@ plan n = Plan wmap dlinfo perm base
            \c -> map (w^(ns*r*c) *) $ map ((w^^) . (c *)) $ enumFromN 0 ns
 
     -- Base transform.
-    base = makeBase lastf
-
-    -- Map collecting all root of unity powers needed for transform
-    -- calculations of this size.
-    wmap = makeWMap $ lastf `cons` wfacs
-
+    (base, mextraperm) = makeBase lastf
 
 -- | Make base transform for a given sub-problem size.
-makeBase :: Int -> BaseTransform
+makeBase :: Int -> (BaseTransform, Maybe VI)
 makeBase sz
-  | sz `IM.member` specialBases = SpecialBase sz
+  | sz `IM.member` specialBases = (SpecialBase sz, Nothing)
   | isPrime sz                  = makeRaderBase sz
-  | otherwise                   = DFTBase sz
-
-
--- | Make integer map giving all powers of roots of unity needed for a
--- particular plan (for both forward and inverse FFTs).
-makeWMap :: VI -> WMap
-makeWMap ss = IM.fromList $ P.concatMap wvec $ nub $ toList ss
-  where wvec n = let w = omega n
-                     ws = generate n (w ^)
-                 in [(n, ws), (-n, map (1 /) ws)]
-
+  | otherwise                   = (makeDFTBase sz, Nothing)
 
 -- | Generate digit reversal permutation using elementary "modulo"
 -- permutations: last digit is not permuted to match with using a
@@ -73,7 +65,7 @@ makeWMap ss = IM.fromList $ P.concatMap wvec $ nub $ toList ss
 digrev :: Int -> VI -> Maybe VI
 digrev n fs
   | null fs   = Nothing
-  | otherwise = Just $ V.foldl1' (%.%) $ V.map dupperm subperms
+  | otherwise = Just $ V.foldl1' (%.%) $ V.map (dupperm n) subperms
   where
     vfs = convert fs
 
@@ -84,24 +76,21 @@ digrev n fs
     -- Partial sub-permutations, one per factor.
     subperms = V.reverse $ V.zipWith perm sizes vfs
 
-    -- Duplicate a sub-permutation to fill the required vector length.
-    dupperm p =
-      let sublen = length p
-          shift di = map (+(sublen * di)) p
-      in concatMap shift $ enumFromN 0 (n `div` sublen)
-
     -- Generate a single "modulo" permutation.
     perm sz fac = concatMap doone $ enumFromN 0 fac
       where doone i = generate (sz `div` fac) (\j -> j * fac + i)
 
-    -- Composition of permutations.
-    (%.%) :: VI -> VI -> VI
-    p1 %.% p2 = backpermute p2 p1
-
+-- | Pre-computation plan for basic DFT transform.
+makeDFTBase :: Int -> BaseTransform
+makeDFTBase sz = DFTBase sz wsfwd wsinv
+  where w = omega sz
+        wsfwd = generate sz (w ^)
+        wsinv = map (1 /) wsfwd
 
 -- | Pre-compute plan for prime-length Rader FFT transform.
-makeRaderBase :: Int -> BaseTransform
-makeRaderBase sz = RaderBase sz inperm outperm bpad bpadinv csz (plan csz)
+makeRaderBase :: Int -> (BaseTransform, Maybe VI)
+makeRaderBase sz = (RaderBase sz outperm bpad bpadinv csz (plan csz),
+                    Just inperm)
   where
     -- Convolution length.
     sz1 = sz - 1
@@ -116,7 +105,7 @@ makeRaderBase sz = RaderBase sz inperm outperm bpad bpadinv csz (plan csz)
     ig = invModN sz g
 
     -- Input value permutation according to group generator indexing.
-    inperm = iterateN sz1 (\n -> (g * n) `mod` sz) 1
+    inperm = 0 `cons` iterateN sz1 (\n -> (g * n) `mod` sz) 1
 
     -- Index vector based on inverse group generator ordering.
     outperm = iterateN sz1 (\n -> (ig * n) `mod` sz) 1

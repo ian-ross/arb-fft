@@ -1,5 +1,5 @@
 module Numeric.FFT.Types
-       ( VCD, MVCD, VVCD, VMVCD, VVVCD, VI, WMap
+       ( VCD, MVCD, VVCD, VMVCD, VVVCD, VI
        , Direction (..), Plan (..), BaseTransform (..)
        ) where
 
@@ -17,7 +17,6 @@ type VVCD = V.Vector VCD
 type VVVCD = V.Vector VVCD
 type VMVCD a = V.Vector (MVCD a)
 type VI = Vector Int
-type WMap = IntMap VCD
 
 -- | Transform direction: 'Forward' is the normal FFT, 'Inverse' is
 -- inverse FFT.
@@ -26,10 +25,7 @@ data Direction = Forward | Inverse deriving (Eq, Show)
 -- | A FFT plan.  This depends only on the problem size and can be
 -- pre-computed and reused to transform (and inverse transform) any
 -- number of vectors of the given size.
-data Plan = Plan { plWMap :: WMap
-                   -- ^ Powers of roots of unity: @plWMap IM.! n@ is a
-                   -- vector of values of @omega_n^i@ for @0 <= i < n@.
-                 , plDLInfo :: V.Vector (Int, Int, VVVCD, VVVCD)
+data Plan = Plan { plDLInfo :: V.Vector (Int, Int, VVVCD, VVVCD)
                    -- ^ Size information and diagonal matrix entries
                    -- for Danielson-Lanczos recursive decomposition of
                    -- problem size.
@@ -49,18 +45,23 @@ data Plan = Plan { plWMap :: WMap
 -- Rader prime-length FFT invocation.
 data BaseTransform = SpecialBase { baseSize :: Int }
                      -- ^ Hard-coded small-size base transform.
-                   | DFTBase { baseSize :: Int }
-                     -- ^ Simple DFT base transform.
+                   | DFTBase { baseSize :: Int
+                             , dftWsFwd :: VCD
+                             , dftWsInv :: VCD }
+                     -- ^ Simple DFT base transform, giving problem
+                     -- size and powers of roots of unity needed for
+                     -- transform.
                    | RaderBase { baseSize :: Int
-                               , raderInPerm :: VI
                                , raderOutPerm :: VI
                                , raderBFwd :: VCD
                                , raderBInv :: VCD
                                , raderConvSize :: Int
                                , raderConvPlan :: Plan }
                      -- ^ Prime-length Rader FFT base transform,
-                     -- giving problem size, input and output index
-                     -- permutations, pre-transformed Rader b sequence
+                     -- giving problem size, output index permutation
+                     -- (the input index permutation is folded into
+                     -- the main input permutation of the full
+                     -- transform), pre-transformed Rader b sequence
                      -- for forward and inverse problems, padded
                      -- problem size for Rader sequence convolution
                      -- and a (2^N-sized) sub-plan for computing the

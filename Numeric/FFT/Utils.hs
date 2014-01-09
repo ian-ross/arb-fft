@@ -1,9 +1,10 @@
 module Numeric.FFT.Utils
        ( omega, slicevecs, slicemvecs, primes, isPrime, factors
-       , primitiveRoot, invModN, log2
+       , primitiveRoot, invModN, log2, dupperm, (%.%)
        ) where
 
-import Prelude hiding (all, dropWhile, enumFromTo, filter, head, length, map)
+import Prelude hiding (all, concatMap, dropWhile, enumFromTo,
+                       filter, head, length, map)
 import qualified Prelude as P
 import Data.Complex
 import Data.Vector.Unboxed
@@ -117,3 +118,14 @@ factors n = let (lst, rest) = go n primes in (lst, fromList rest)
 log2 :: Int -> Int
 log2 1 = 0
 log2 n = 1 + log2 (n `div` 2)
+
+-- | Duplicate a sub-permutation to fill a given vector length.
+dupperm :: Int -> VI -> VI
+dupperm n p =
+  let sublen = length p
+      shift di = map (+(sublen * di)) p
+  in concatMap shift $ enumFromN 0 (n `div` sublen)
+
+-- | Composition of permutations.
+(%.%) :: VI -> VI -> VI
+p1 %.% p2 = backpermute p2 p1
