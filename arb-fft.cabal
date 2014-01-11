@@ -17,6 +17,9 @@ Library
   other-modules:    Numeric.FFT.Plan
                     Numeric.FFT.Execute
                     Numeric.FFT.Special
+                    Numeric.FFT.Special.PowersOfTwo
+                    Numeric.FFT.Special.Primes
+                    Numeric.FFT.Special.Miscellaneous
                     Numeric.FFT.Types
                     Numeric.FFT.Utils
   ghc-options:      -O2
