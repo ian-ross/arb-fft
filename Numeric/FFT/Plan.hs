@@ -1,4 +1,4 @@
-module Numeric.FFT.Plan ( plan ) where
+module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
 import Prelude hiding (concatMap, enumFromTo, length, map, null, reverse,
                        scanl, zip, zipWith)
@@ -16,11 +16,12 @@ import Numeric.FFT.Special
 
 -- | Plan calculation for a given problem size.
 plan :: Int -> Plan
-plan n = Plan dlinfo perm base
-  where
-    -- Factorise input vector length.
-    (lastf, fs) = factors n
+plan n = planFromFactors n $ factors n
 
+-- | Plan calculation for a given problem factorisation.
+planFromFactors :: Int -> (Int, Vector Int) -> Plan
+planFromFactors n (lastf, fs) = Plan dlinfo perm base
+  where
     -- Input data "digit reversal" permutation.
     digperm = digrev n fs
 
