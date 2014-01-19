@@ -15,6 +15,10 @@ import qualified Data.Set as S
 import qualified Data.Vector as V
 import Data.Vector.Unboxed
 import Control.Monad.IO.Class
+import System.Directory
+import System.Environment
+import System.FilePath
+import System.IO
 import System.IO.Unsafe (unsafePerformIO)
 import Criterion
 import Criterion.Config
@@ -43,23 +47,29 @@ timingEnv = unsafePerformIO (newIORef Nothing)
 -- | Plan calculation for a given problem size.
 empiricalPlan :: Int -> IO Plan
 empiricalPlan n = do
-  let ps = testPlans n nTestPlans
-  withConfig (defaultConfig { cfgVerbosity = ljust Quiet
-                            , cfgSamples   = ljust 1 }) $ do
-    menv <- liftIO $ readIORef timingEnv
-    env <- case menv of
-      Just e -> return e
-      Nothing -> do
-        meas <- measureEnvironment
-        liftIO $ writeIORef timingEnv $ Just meas
-        return meas
-    let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
-    tps <- CM.forM ps $ \p -> do
-      let pp = planFromFactors n p
-      ts <- runBenchmark env $ nf (execute pp Forward) v
-      return (sum ts / fromIntegral (length ts), pp)
-    let (rest, resp) = L.minimumBy (compare `on` fst) tps
-    return resp
+  wis <- readWisdom n
+  case wis of
+    Just p -> return $ planFromFactors n p
+    Nothing -> do
+      let ps = testPlans n nTestPlans
+      liftIO $ putStrLn $ "ps = " P.++ show ps
+      withConfig (defaultConfig { cfgVerbosity = ljust Quiet
+                                , cfgSamples   = ljust 1 }) $ do
+        menv <- liftIO $ readIORef timingEnv
+        env <- case menv of
+          Just e -> return e
+          Nothing -> do
+            meas <- measureEnvironment
+            liftIO $ writeIORef timingEnv $ Just meas
+            return meas
+        let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
+        tps <- CM.forM ps $ \p -> do
+          let pp = planFromFactors n p
+          ts <- runBenchmark env $ nf (execute pp Forward) v
+          return (sum ts / fromIntegral (length ts), p)
+        let (rest, resp) = L.minimumBy (compare `on` fst) tps
+        liftIO $ writeWisdom n resp
+        return $ planFromFactors n resp
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> Plan
@@ -94,6 +104,28 @@ planFromFactors n (lastf, fs) = Plan dlinfo perm base
 
     -- Base transform.
     (base, mextraperm) = makeBase lastf
+
+-- | Read from wisdom for a given problem size.
+readWisdom :: Int -> IO (Maybe (Int, Vector Int))
+readWisdom n = do
+  home <- getEnv "HOME"
+  let wisf = home </> ".fft-plan" </> show n
+  ex <- doesFileExist wisf
+  case ex of
+    False -> return Nothing
+    True -> do
+      wist <- readFile wisf
+      let (wisb, wisfs) = read wist :: (Int, [Int])
+      return $ Just (wisb, fromList wisfs)
+
+-- | Write wisdom for a given problem size.
+writeWisdom :: Int -> (Int, Vector Int) -> IO ()
+writeWisdom n (b, fs) = do
+  home <- getEnv "HOME"
+  let wisd = home </> ".fft-plan"
+      wisf = wisd </> show n
+  createDirectoryIfMissing True wisd
+  writeFile wisf $ show (b, toList fs) P.++ "\n"
 
 -- | Make base transform for a given sub-problem size.
 makeBase :: Int -> (BaseTransform, Maybe VI)
@@ -216,7 +248,9 @@ testPlans n nplans = L.take nplans $
 
 -- | List plans from a single base.
 basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
-basePlans n vfs bt = P.map (\v -> SPlan (bt, v)) $ leftOvers lfs
+basePlans n vfs bt = if null lfs
+                     then [SPlan (bt, empty)]
+                     else P.map (\v -> SPlan (bt, v)) $ leftOvers lfs
   where lfs = fromList $ (toList vfs) \\ (toList $ allFactors b)
         b = bSize bt
 
