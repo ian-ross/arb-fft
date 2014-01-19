@@ -1,16 +1,20 @@
 module Numeric.FFT.Utils
-       ( omega, slicevecs, slicemvecs, primes, isPrime, factors
-       , primitiveRoot, invModN, log2, dupperm, (%.%)
+       ( omega, slicevecs, slicemvecs, primes, isPrime
+       , allFactors, factors
+       , primitiveRoot, invModN, log2, isPow2, dupperm, (%.%)
+       , compositions, makeComp, multisetPerms
        ) where
 
 import Prelude hiding (all, concatMap, dropWhile, enumFromTo,
-                       filter, head, length, map)
+                       filter, head, length, map, maximum, null, reverse)
 import qualified Prelude as P
+import Data.Bits
 import Data.Complex
 import Data.Vector.Unboxed
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MV
 import Data.List (nub)
+import qualified Data.List as L
 
 import Numeric.FFT.Types
 
@@ -119,6 +123,13 @@ log2 :: Int -> Int
 log2 1 = 0
 log2 n = 1 + log2 (n `div` 2)
 
+-- | Check for powers of two.
+isPow2 :: Int -> Bool
+isPow2 1 = True
+isPow2 n
+  | n `mod` 2 == 0 = isPow2 $ n `div` 2
+  | otherwise      = False
+
 -- | Duplicate a sub-permutation to fill a given vector length.
 dupperm :: Int -> VI -> VI
 dupperm n p =
@@ -129,3 +140,49 @@ dupperm n p =
 -- | Composition of permutations.
 (%.%) :: VI -> VI -> VI
 p1 %.% p2 = backpermute p2 p1
+
+-- | Generate all compositions of a given integer.
+compositions :: Int -> V.Vector (Vector Int)
+compositions 0 = V.empty
+compositions n = let fs = allFactors n
+                 in V.reverse $ V.map (makeComp fs) $ V.enumFromN 0 (2^(n-1))
+
+-- | Generate a single composition of a given integer.
+makeComp :: Vector Int -> Int -> Vector Int
+makeComp fs i = fromList $ foldOps (toList fs) $ makeOps (length fs) i
+  where foldOps :: [Int] -> [Bool] -> [Int]
+        foldOps (f:fs) ops = go f fs ops
+          where go acc [] [] = [acc]
+                go acc (f:fs) (op:ops) = if op then go (acc * f) fs ops
+                                         else acc : go f fs ops
+        makeOps :: Int -> Int -> [Bool]
+        makeOps n i = P.replicate (n - 1 - P.length bs) False P.++ bs
+          where bs = P.dropWhile not $ P.reverse $
+                     P.map (testBit i) [0..bitSize i-1]
+
+-- | Generate all distinct permutations of a multiset in lexicographic
+-- order.
+multisetPerms :: Vector Int -> [Vector Int]
+multisetPerms idp = sidp : L.unfoldr step sidp
+  where sidp = fromList $ L.sort $ toList idp
+        step v = case permStep v of
+          Nothing -> Nothing
+          Just p -> Just (p, p)
+        permStep :: Vector Int -> Maybe (Vector Int)
+        permStep v =
+          if null ks
+          then Nothing
+          else let k = maximum ks
+                   ls = filter (\i -> v ! k < v ! i) $ enumFromN 0 n
+                   l = maximum ls
+               in Just $ revEnd k (swap k l)
+          where n = length v
+                ks = filter (\i -> v ! i < v ! (i+1)) $ enumFromN 0 (n-1)
+                swap a b = generate n $ \i ->
+                  if i == a then v ! b
+                  else if i == b then v ! a
+                       else v ! i
+                revEnd f vv = generate n $ \i ->
+                  if i <= f
+                  then vv ! i
+                  else vv ! (n - i + f)

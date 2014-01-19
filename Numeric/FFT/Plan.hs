@@ -1,12 +1,25 @@
-module Numeric.FFT.Plan ( plan, planFromFactors ) where
+module Numeric.FFT.Plan ( plan, planFromFactors, empiricalPlan ) where
 
-import Prelude hiding (concatMap, enumFromTo, length, map, null, reverse,
-                       scanl, zip, zipWith)
+import Prelude hiding ((++), concatMap, enumFromTo, filter, length, map,
+                       maximum, null, reverse, scanl, sum, zip, zipWith)
 import qualified Prelude as P
+import qualified Control.Monad as CM
+import Data.Complex
+import Data.Function (on)
+import Data.IORef
 import qualified Data.IntMap.Strict as IM
-import Data.List (nub)
+import Data.List (nub, (\\))
+import qualified Data.List as L
+import Data.Ord
+import qualified Data.Set as S
 import qualified Data.Vector as V
 import Data.Vector.Unboxed
+import Control.Monad.IO.Class
+import System.IO.Unsafe (unsafePerformIO)
+import Criterion
+import Criterion.Config
+import Criterion.Monad
+import Criterion.Environment
 
 import Numeric.FFT.Types
 import Numeric.FFT.Execute
@@ -17,6 +30,36 @@ import Numeric.FFT.Special
 -- | Plan calculation for a given problem size.
 plan :: Int -> Plan
 plan n = planFromFactors n $ factors n
+
+-- | Number of plans to test empirically.
+nTestPlans :: Int
+nTestPlans = 50
+
+-- | Globally shared timing environment.  (Not thread-safe...)
+timingEnv :: IORef (Maybe Environment)
+timingEnv = unsafePerformIO (newIORef Nothing)
+{-# NOINLINE timingEnv #-}
+
+-- | Plan calculation for a given problem size.
+empiricalPlan :: Int -> IO Plan
+empiricalPlan n = do
+  let ps = testPlans n nTestPlans
+  withConfig (defaultConfig { cfgVerbosity = ljust Quiet
+                            , cfgSamples   = ljust 1 }) $ do
+    menv <- liftIO $ readIORef timingEnv
+    env <- case menv of
+      Just e -> return e
+      Nothing -> do
+        meas <- measureEnvironment
+        liftIO $ writeIORef timingEnv $ Just meas
+        return meas
+    let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
+    tps <- CM.forM ps $ \p -> do
+      let pp = planFromFactors n p
+      ts <- runBenchmark env $ nf (execute pp Forward) v
+      return (sum ts / fromIntegral (length ts), pp)
+    let (rest, resp) = L.minimumBy (compare `on` fst) tps
+    return resp
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> Plan
@@ -126,3 +169,70 @@ makeRaderBase sz = (RaderBase sz outperm bpad bpadinv csz (plan csz),
 
     -- Forward FFT with embedded plan calculation.
     fft xs = execute (plan $ length xs) Forward xs
+
+-- | Base transform type with heuristic ordering.
+data BaseType = Special Int | Rader Int deriving (Eq, Show)
+
+-- | Newtype wrapper for custom sorting.
+newtype SPlan = SPlan (BaseType, Vector Int) deriving (Eq, Show)
+
+-- | Base transform size.
+bSize :: BaseType -> Int
+bSize (Special b) = b
+bSize (Rader b) = b
+
+-- | Heuristic ordering for base transform types: special bases come
+-- first, then prime bases using Rader's algorithm, ordered according
+-- to size compensating for padding needed in the Rader's algorithm
+-- convolution.
+instance Ord BaseType where
+  compare (Special _)  (Rader _)    = LT
+  compare (Rader _)    (Special _)  = GT
+  compare (Special s1) (Special s2) = compare s1 s2
+  compare (Rader r1)   (Rader r2)   = case (isPow2 $ r1 - 1, isPow2 $ r2 - 1) of
+    (True, True) -> compare r1 r2
+    (True, False) -> compare r1 (2 * r2)
+    (False, True) -> compare (2 * r1) r2
+    (False, False) -> compare r1 r2
+
+-- | Heuristic ordering for full plans, based first on base type, then
+-- on the maximum size of Danielson-Lanczos step.
+instance Ord SPlan where
+  compare (SPlan (b1, fs1)) (SPlan (b2, fs2)) = case compare b1 b2 of
+    LT -> LT
+    EQ -> compare (maximum fs2) (maximum fs1)
+    GT -> GT
+
+-- | Generate test plans for a given input size, sorted in heuristic
+-- order.
+testPlans :: Int -> Int -> [(Int, Vector Int)]
+testPlans n nplans = L.take nplans $
+                     L.map clean $
+                     L.sortBy (comparing Down) $ P.concatMap doone bs
+  where vfs = allFactors n
+        bs = usableBases n vfs
+        doone b = basePlans n vfs b
+        clean (SPlan (b, fs)) = (bSize b, fs)
+
+-- | List plans from a single base.
+basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
+basePlans n vfs bt = P.map (\v -> SPlan (bt, v)) $ leftOvers lfs
+  where lfs = fromList $ (toList vfs) \\ (toList $ allFactors b)
+        b = bSize bt
+
+-- | Produce all distinct permutations and compositions constructable
+-- from a given list of factors.
+leftOvers :: Vector Int -> [Vector Int]
+leftOvers fs =
+  if null fs
+  then []
+  else S.toList $ L.foldl' go S.empty (multisetPerms fs)
+  where n = length fs
+        go fset perm = foldl' doone fset (enumFromN 0 (2^(n - 1)))
+          where doone s i = S.insert (makeComp perm i) s
+
+-- | Usable base transform sizes.
+usableBases :: Int -> Vector Int -> [BaseType]
+usableBases n fs = P.map Special bs P.++ P.map Rader ps
+  where bs = toList $ filter ((== 0) . (n `mod`)) specialBaseSizes
+        ps = toList $ filter isPrime $ filter (> maxPrimeSpecialBaseSize) fs

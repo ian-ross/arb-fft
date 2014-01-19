@@ -6,7 +6,7 @@
 -- codelets for small primes.
 module Numeric.FFT
        ( fft, ifft, fftWith, ifftWith
-       , plan, planFromFactors, execute
+       , plan, planFromFactors, empiricalPlan, execute
        , Plan (..), Direction (..), BaseTransform (..)
        ) where
 

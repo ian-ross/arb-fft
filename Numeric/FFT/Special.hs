@@ -1,5 +1,9 @@
-module Numeric.FFT.Special ( specialBases ) where
+module Numeric.FFT.Special
+       ( specialBases
+       , specialBaseSizes
+       , maxPrimeSpecialBaseSize ) where
 
+import Prelude hiding (filter, maximum)
 import Control.Monad.ST
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
@@ -41,4 +45,10 @@ specialBases = IM.fromList [ ( 2, special2)
                            , (25, special25)
                            ]
 
+-- | Available base transform sizes.
+specialBaseSizes :: Vector Int
+specialBaseSizes = fromList $ IM.keys specialBases
 
+-- | Largest prime for which we have a specialised base transform.
+maxPrimeSpecialBaseSize :: Int
+maxPrimeSpecialBaseSize = maximum $ filter isPrime specialBaseSizes
