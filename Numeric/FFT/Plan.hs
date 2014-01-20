@@ -64,7 +64,12 @@ empiricalPlan n = do
         let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
         tps <- CM.forM ps $ \p -> do
           let pp = planFromFactors n p
-          ts <- runBenchmark env $ nf (execute pp Forward) v
+          pptest <- case plBase pp of
+            bpl@(RaderBase _ _ _ _ csz _) -> do
+              cplan <- liftIO $ empiricalPlan csz
+              return $ pp { plBase = bpl { raderConvPlan = cplan } }
+            _ -> return pp
+          ts <- runBenchmark env $ nf (execute pptest Forward) v
           return (sum ts / fromIntegral (length ts), p)
         let (rest, resp) = L.minimumBy (compare `on` fst) tps
         liftIO $ writeWisdom n resp
