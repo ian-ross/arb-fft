@@ -52,7 +52,6 @@ empiricalPlan n = do
     Just p -> return $ planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
-      liftIO $ putStrLn $ "ps = " P.++ show ps
       withConfig (defaultConfig { cfgVerbosity = ljust Quiet
                                 , cfgSamples   = ljust 1 }) $ do
         menv <- liftIO $ readIORef timingEnv
@@ -69,7 +68,12 @@ empiricalPlan n = do
           return (sum ts / fromIntegral (length ts), p)
         let (rest, resp) = L.minimumBy (compare `on` fst) tps
         liftIO $ writeWisdom n resp
-        return $ planFromFactors n resp
+        let pret = planFromFactors n resp
+        case plBase pret of
+          bpl@(RaderBase _ _ _ _ csz _) -> do
+            cplan <- liftIO $ empiricalPlan csz
+            return $ pret { plBase = bpl { raderConvPlan = cplan } }
+          _ -> return pret
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> Plan
