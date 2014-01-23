@@ -48,7 +48,7 @@ timingEnv = unsafePerformIO (newIORef Nothing)
 empiricalPlan :: Int -> IO Plan
 empiricalPlan n = do
   wis <- readWisdom n
-  case wis of
+  pret <- case wis of
     Just p -> return $ planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
@@ -73,12 +73,12 @@ empiricalPlan n = do
           return (sum ts / fromIntegral (length ts), p)
         let (rest, resp) = L.minimumBy (compare `on` fst) tps
         liftIO $ writeWisdom n resp
-        let pret = planFromFactors n resp
-        case plBase pret of
-          bpl@(RaderBase _ _ _ _ csz _) -> do
-            cplan <- liftIO $ empiricalPlan csz
-            return $ pret { plBase = bpl { raderConvPlan = cplan } }
-          _ -> return pret
+        return $ planFromFactors n resp
+  case plBase pret of
+    bpl@(RaderBase _ _ _ _ csz _) -> do
+      cplan <- liftIO $ empiricalPlan csz
+      return $ pret { plBase = bpl { raderConvPlan = cplan } }
+    _ -> return pret
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> Plan
