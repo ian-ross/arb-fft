@@ -48,8 +48,13 @@ timingEnv = unsafePerformIO (newIORef Nothing)
 empiricalPlan :: Int -> IO Plan
 empiricalPlan n = do
   wis <- readWisdom n
+  let fixRader p = case plBase p of
+        bpl@(RaderBase _ _ _ _ csz _) -> do
+          cplan <- liftIO $ empiricalPlan csz
+          return $ p { plBase = bpl { raderConvPlan = cplan } }
+        _ -> return p
   pret <- case wis of
-    Just p -> return $ planFromFactors n p
+    Just (p, t) -> return $ planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
       withConfig (defaultConfig { cfgVerbosity = ljust Quiet
@@ -63,22 +68,13 @@ empiricalPlan n = do
             return meas
         let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
         tps <- CM.forM ps $ \p -> do
-          let pp = planFromFactors n p
-          pptest <- case plBase pp of
-            bpl@(RaderBase _ _ _ _ csz _) -> do
-              cplan <- liftIO $ empiricalPlan csz
-              return $ pp { plBase = bpl { raderConvPlan = cplan } }
-            _ -> return pp
-          ts <- runBenchmark env $ nf (execute pptest Forward) v
+          ptest <- fixRader $ planFromFactors n p
+          ts <- runBenchmark env $ nf (execute ptest Forward) v
           return (sum ts / fromIntegral (length ts), p)
         let (rest, resp) = L.minimumBy (compare `on` fst) tps
-        liftIO $ writeWisdom n resp
+        liftIO $ writeWisdom n resp rest
         return $ planFromFactors n resp
-  case plBase pret of
-    bpl@(RaderBase _ _ _ _ csz _) -> do
-      cplan <- liftIO $ empiricalPlan csz
-      return $ pret { plBase = bpl { raderConvPlan = cplan } }
-    _ -> return pret
+  fixRader pret
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> Plan
@@ -115,7 +111,7 @@ planFromFactors n (lastf, fs) = Plan dlinfo perm base
     (base, mextraperm) = makeBase lastf
 
 -- | Read from wisdom for a given problem size.
-readWisdom :: Int -> IO (Maybe (Int, Vector Int))
+readWisdom :: Int -> IO (Maybe ((Int, Vector Int), Double))
 readWisdom n = do
   home <- getEnv "HOME"
   let wisf = home </> ".fft-plan" </> show n
@@ -124,17 +120,17 @@ readWisdom n = do
     False -> return Nothing
     True -> do
       wist <- readFile wisf
-      let (wisb, wisfs) = read wist :: (Int, [Int])
-      return $ Just (wisb, fromList wisfs)
+      let ((wisb, wisfs), wistim) = read wist :: ((Int, [Int]), Double)
+      return $ Just ((wisb, fromList wisfs), wistim)
 
 -- | Write wisdom for a given problem size.
-writeWisdom :: Int -> (Int, Vector Int) -> IO ()
-writeWisdom n (b, fs) = do
+writeWisdom :: Int -> (Int, Vector Int) -> Double -> IO ()
+writeWisdom n (b, fs) tim = do
   home <- getEnv "HOME"
   let wisd = home </> ".fft-plan"
       wisf = wisd </> show n
   createDirectoryIfMissing True wisd
-  writeFile wisf $ show (b, toList fs) P.++ "\n"
+  writeFile wisf $ show ((b, toList fs), tim) P.++ "\n"
 
 -- | Make base transform for a given sub-problem size.
 makeBase :: Int -> (BaseTransform, Maybe VI)
