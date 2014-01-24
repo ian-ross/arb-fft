@@ -593,7 +593,7 @@ special25 sign xsin xsout = do
   xr18 :+ xi18 <- MV.unsafeRead xsin 18 ; xr19 :+ xi19 <- MV.unsafeRead xsin 19
   xr20 :+ xi20 <- MV.unsafeRead xsin 20 ; xr21 :+ xi21 <- MV.unsafeRead xsin 21
   xr22 :+ xi22 <- MV.unsafeRead xsin 22 ; xr23 :+ xi23 <- MV.unsafeRead xsin 23
-  xr24 :+ xi24 <- MV.unsafeRead xsin 22
+  xr24 :+ xi24 <- MV.unsafeRead xsin 24
   let t4 = xr5+xr20 ; t1S = xr5-xr20 ; t7 = xr10+xr15 ; t1T = xr10-xr15
       t4Q = t1T-kp618033988*t1S ; t1U = t1S+kp618033988*t1T
       t8 = t4+t7 ; t3a = t4-t7 ; t3c = xi5-xi20 ; t1y = xi5+xi20
@@ -610,7 +610,7 @@ special25 sign xsin xsout = do
       t2m = xr19-xr14 ; tp = xr14+xr19 ; tq = tm+tp ; t2c = tm-tp
       t2e = xi24-xi9 ; t12 = xi9+xi24 ; t15 = xi14+xi19 ; t2f = xi19-xi14
       t23 = xr1-kp250000000*th ; ti = xr1+th ; t2j = t15-t12
-      t16 = t12+t15 ; tr = xr4+tq ; t2b = xr4 + kp250000000 * tq
+      t16 = t12+t15 ; tr = xr4+tq ; t2b = kp250000000 * tq - xr4
       t1W = xi1-kp250000000*tX ; tY = xi1+tX
       t21 = t1Z+kp618033988*t20 ; t4y = t20-kp618033988*t1Z
       t2i = xi4-kp250000000*t16 ; t17 = xi4+t16 ; ts = ti+tr
