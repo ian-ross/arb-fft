@@ -6,7 +6,7 @@
 -- codelets for small primes.
 module Numeric.FFT
        ( fft, ifft, fftWith, ifftWith
-       , plan, planFromFactors, empiricalPlan, execute
+       , plan, planFromFactors, execute
        , Plan (..), Direction (..), BaseTransform (..)
        ) where
 
@@ -20,12 +20,16 @@ import Numeric.FFT.Execute
 
 
 -- | Forward FFT with embedded plan calculation.
-fft :: Vector (Complex Double) -> Vector (Complex Double)
-fft xs = fftWith (plan $ length xs) xs
+fft :: Vector (Complex Double) -> IO (Vector (Complex Double))
+fft xs = do
+  p <- plan $ length xs
+  return $ fftWith p xs
 
 -- | Inverse FFT with embedded plan calculation.
-ifft :: Vector (Complex Double) -> Vector (Complex Double)
-ifft xs = ifftWith (plan $ length xs) xs
+ifft :: Vector (Complex Double) -> IO (Vector (Complex Double))
+ifft xs = do
+  p <- plan $ length xs
+  return $ ifftWith p xs
 
 -- | Forward FFT with pre-computed plan.
 fftWith :: Plan -> Vector (Complex Double) -> Vector (Complex Double)

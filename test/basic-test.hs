@@ -1,13 +1,16 @@
 {-# LANGUAGE ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances #-}
 module Main where
 
-import Prelude hiding (length, map, maximum, sum, zipWith)
+import Prelude hiding ((++), length, map, maximum, sum, zipWith)
+import qualified Prelude as P
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.QuickCheck
+import Test.QuickCheck.Monadic
 import Control.Applicative ((<$>))
 import Data.Complex
 import Data.Vector
+import System.IO.Unsafe (unsafePerformIO)
 
 import Debug.Trace
 
@@ -28,16 +31,27 @@ defuzz = map (\(r :+ i) -> df r :+ df i)
   where df x = if abs x < 1.0E-6 then 0 else x
 
 -- Check FFT against DFT.
-check :: Vector (Complex Double) -> (Double, Vector (Complex Double))
-check v = let diff = defuzz $ zipWith (-) (fft v) (basicDFT v)
-          in (maximum $ map magnitude diff, diff)
+check :: Vector (Complex Double) -> IO (Double, Vector (Complex Double))
+check v = do
+  tst <- fft v
+  let diff = defuzz $ zipWith (-) tst (basicDFT v)
+  return (maximum $ map magnitude diff, diff)
 
 -- QuickCheck property for FFT vs. DFT testing.
-prop_dft_vs_fft (v :: Vector (Complex Double)) = fst (check v) < 1.0E-6
+prop_dft_vs_fft :: Property
+prop_dft_vs_fft = monadicIO $ do
+  v <- pick arbitrary
+  chk <- run $ check v
+  assert $ fst chk < 1.0E-6
 
 -- QuickCheck property for inverse FFT round-trip testing.
-prop_ifft (v :: Vector (Complex Double)) = maximum (map magnitude diff) < 1.0E-6
-  where diff = zipWith (-) v (ifft $ fft v)
+prop_ifft :: Property
+prop_ifft = monadicIO $ do
+  v <- pick arbitrary
+  fwd <- run $ fft v
+  bwd <- run $ ifft fwd
+  let diff = zipWith (-) v bwd
+  assert $ maximum (map magnitude diff) < 1.0E-6
 
 -- Non-zero length arbitrary vectors.
 instance Arbitrary (Vector (Complex Double)) where

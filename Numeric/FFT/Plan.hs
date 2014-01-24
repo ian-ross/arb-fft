@@ -1,8 +1,9 @@
-module Numeric.FFT.Plan ( plan, planFromFactors, empiricalPlan ) where
+module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
 import Prelude hiding ((++), concatMap, enumFromTo, filter, length, map,
                        maximum, null, reverse, scanl, sum, zip, zipWith)
 import qualified Prelude as P
+import Control.Applicative ((<$>))
 import qualified Control.Monad as CM
 import Data.Complex
 import Data.Function (on)
@@ -31,10 +32,6 @@ import Numeric.FFT.Utils
 import Numeric.FFT.Special
 
 
--- | Plan calculation for a given problem size.
-plan :: Int -> Plan
-plan n = planFromFactors n $ factors n
-
 -- | Number of plans to test empirically.
 nTestPlans :: Int
 nTestPlans = 50
@@ -45,16 +42,17 @@ timingEnv = unsafePerformIO (newIORef Nothing)
 {-# NOINLINE timingEnv #-}
 
 -- | Plan calculation for a given problem size.
-empiricalPlan :: Int -> IO Plan
-empiricalPlan n = do
+plan :: Int -> IO Plan
+plan 1 = return $ Plan V.empty Nothing (SpecialBase 1)
+plan n = do
   wis <- readWisdom n
   let fixRader p = case plBase p of
         bpl@(RaderBase _ _ _ _ csz _) -> do
-          cplan <- liftIO $ empiricalPlan csz
+          cplan <- liftIO $ plan csz
           return $ p { plBase = bpl { raderConvPlan = cplan } }
         _ -> return p
   pret <- case wis of
-    Just (p, t) -> return $ planFromFactors n p
+    Just (p, t) -> planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
       withConfig (defaultConfig { cfgVerbosity = ljust Quiet
@@ -68,27 +66,31 @@ empiricalPlan n = do
             return meas
         let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
         tps <- CM.forM ps $ \p -> do
-          ptest <- fixRader $ planFromFactors n p
+          ptest <- liftIO $ planFromFactors n p >>= fixRader
           ts <- runBenchmark env $ nf (execute ptest Forward) v
           return (sum ts / fromIntegral (length ts), p)
         let (rest, resp) = L.minimumBy (compare `on` fst) tps
         liftIO $ writeWisdom n resp rest
-        return $ planFromFactors n resp
+        liftIO $ planFromFactors n resp
   fixRader pret
 
 -- | Plan calculation for a given problem factorisation.
-planFromFactors :: Int -> (Int, Vector Int) -> Plan
-planFromFactors n (lastf, fs) = Plan dlinfo perm base
+planFromFactors :: Int -> (Int, Vector Int) -> IO Plan
+planFromFactors n (lastf, fs) = do
+  -- Base transform.
+  (base, mextraperm) <- makeBase lastf
+
+  -- Include permutation of base transform if needed.
+  let perm = case (digperm, mextraperm) of
+        (Just dp, Just ep) -> Just $ dupperm n ep %.% dp
+        (Nothing, Just ep) -> Just $ dupperm n ep
+        (Just dp, Nothing) -> Just dp
+        (Nothing, Nothing) -> Nothing
+
+  return $ Plan dlinfo perm base
   where
     -- Input data "digit reversal" permutation.
     digperm = digrev n fs
-
-    -- Include permutation of base transform if needed.
-    perm = case (digperm, mextraperm) of
-      (Just dp, Just ep) -> Just $ dupperm n ep %.% dp
-      (Nothing, Just ep) -> Just $ dupperm n ep
-      (Just dp, Nothing) -> Just dp
-      (Nothing, Nothing) -> Nothing
 
     -- Size information for Danielson-Lanczos steps.
     wfacs = map (n `div`) $ scanl (*) 1 fs
@@ -106,9 +108,6 @@ planFromFactors n (lastf, fs) = Plan dlinfo perm base
       in V.generate split $
          \r -> V.generate split $
            \c -> map (w^(ns*r*c) *) $ map ((w^^) . (c *)) $ enumFromN 0 ns
-
-    -- Base transform.
-    (base, mextraperm) = makeBase lastf
 
 -- | Read from wisdom for a given problem size.
 readWisdom :: Int -> IO (Maybe ((Int, Vector Int), Double))
@@ -133,11 +132,11 @@ writeWisdom n (b, fs) tim = do
   writeFile wisf $ show ((b, toList fs), tim) P.++ "\n"
 
 -- | Make base transform for a given sub-problem size.
-makeBase :: Int -> (BaseTransform, Maybe VI)
+makeBase :: Int -> IO (BaseTransform, Maybe VI)
 makeBase sz
-  | sz `IM.member` specialBases = (SpecialBase sz, Nothing)
+  | sz `IM.member` specialBases = return (SpecialBase sz, Nothing)
   | isPrime sz                  = makeRaderBase sz
-  | otherwise                   = (makeDFTBase sz, Nothing)
+  | otherwise                   = return (makeDFTBase sz, Nothing)
 
 -- | Generate digit reversal permutation using elementary "modulo"
 -- permutations: last digit is not permuted to match with using a
@@ -169,9 +168,22 @@ makeDFTBase sz = DFTBase sz wsfwd wsinv
         wsinv = map (1 /) wsfwd
 
 -- | Pre-compute plan for prime-length Rader FFT transform.
-makeRaderBase :: Int -> (BaseTransform, Maybe VI)
-makeRaderBase sz = (RaderBase sz outperm bpad bpadinv csz (plan csz),
-                    Just inperm)
+makeRaderBase :: Int -> IO (BaseTransform, Maybe VI)
+makeRaderBase sz = do
+  -- Forward FFT with embedded plan calculation.
+  let fft p xs = execute p Forward xs
+
+  -- Plan for convolution transforms.
+  cplan <- plan csz
+
+  -- Root of unity powers cyclically repeated to make vector of next
+  -- power of two length for fast convolution and FFT transformed for
+  -- use in convolution, one for forward transform and one for inverse
+  -- transform.
+  let bpad = fft cplan $ generate csz (\idx -> bs ! (idx `mod` sz1))
+      bpadinv = fft cplan $ generate csz (\idx -> bsinv ! (idx `mod` sz1))
+
+  return (RaderBase sz outperm bpad bpadinv csz cplan, Just inperm)
   where
     -- Convolution length.
     sz1 = sz - 1
@@ -196,16 +208,6 @@ makeRaderBase sz = (RaderBase sz outperm bpad bpadinv csz (plan csz),
     w = omega sz
     bs = backpermute (map (w ^^) $ enumFromTo 0 sz1) outperm
     bsinv = backpermute (map ((w ^^) . negate) $ enumFromTo 0 sz1) outperm
-
-    -- Root of unity powers cyclically repeated to make vector of next
-    -- power of two length for fast convolution and FFT transformed
-    -- for use in convolution, one for forward transform and one for
-    -- inverse transform.
-    bpad = fft $ generate csz (\idx -> bs ! (idx `mod` sz1))
-    bpadinv = fft $ generate csz (\idx -> bsinv ! (idx `mod` sz1))
-
-    -- Forward FFT with embedded plan calculation.
-    fft xs = execute (plan $ length xs) Forward xs
 
 -- | Base transform type with heuristic ordering.
 data BaseType = Special Int | Rader Int deriving (Eq, Show)
