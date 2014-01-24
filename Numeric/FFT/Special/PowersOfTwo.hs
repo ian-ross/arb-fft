@@ -640,7 +640,7 @@ special64 sign xsin xsout = do
       t51 = t4X-kp923879532*t50 ; t6m = t4X+kp923879532*t50
       t6j = t3f+kp923879532*t3u ; t3v = t3f-kp923879532*t3u
       t6n = t4q+kp923879532*t4N ; t4O = t4q-kp923879532*t4N
-      t5U = t5Q-kp923879532*t5t ; t6p = t5Q+kp923879532*t5t
+      t5U = t5Q-kp923879532*t5T ; t6p = t5Q+kp923879532*t5T
       t6q = t5j+kp923879532*t5G ; t5H = t5j-kp923879532*t5G
       t69 = t3N+kp668178637*t3G ; t3O = t3G-kp668178637*t3N
       t6y = t6n-kp303346683*t6m ; t6o = t6m+kp303346683*t6n
