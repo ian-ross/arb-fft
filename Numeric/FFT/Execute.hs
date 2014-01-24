@@ -3,6 +3,8 @@ module Numeric.FFT.Execute ( execute ) where
 import Prelude hiding (concatMap, foldr, length, map, mapM_,
                        null, reverse, sum, zip, zipWith)
 import qualified Prelude as P
+import Control.Monad (when)
+import qualified Control.Monad as CM
 import Control.Monad.ST
 import Control.Monad.Primitive (PrimMonad)
 import Data.Complex
@@ -21,14 +23,18 @@ import Numeric.FFT.Special
 -- | Main FFT plan execution driver.
 execute :: Plan -> Direction -> VCD -> VCD
 execute (Plan dlinfo perm base) dir h =
-  if n == 1 then h else rescale $
-                        if V.null dlinfo
+  if n == 1 then h else if V.null dlinfo
                         then runST $ do
                           mhin <- case perm of
                             Nothing -> thaw h
                             Just p -> unsafeThaw $ backpermute h p
                           mhout <- MV.replicate n 0
                           applyBase base sign mhin mhout
+                          when (dir == Inverse) $ do
+                            let s = 1.0 / fromIntegral n :+ 0
+                            CM.forM_ [0..n-1] $ \i -> do
+                              x <- MV.unsafeRead mhout i
+                              MV.unsafeWrite mhout i $ s * x
                           unsafeFreeze mhout
                         else fullfft
   where
@@ -36,9 +42,10 @@ execute (Plan dlinfo perm base) dir h =
     bsize = baseSize base     -- Size of base transform.
 
     -- Root of unity sign and output rescaling.
-    (sign, rescale) = case dir of
-      Forward -> (1, id)
-      Inverse -> (-1, map ((1.0 / fromIntegral n :+ 0) *))
+    -- Root of unity sign and output rescaling.
+    sign = case dir of
+      Forward -> 1
+      Inverse -> -1
 
     -- Apply Danielson-Lanczos steps and base transform to digit
     -- reversal ordered input vector.
@@ -54,7 +61,13 @@ execute (Plan dlinfo perm base) dir h =
         dl sign dlstep mh0 mh1
         writeSTRef mhr (mh1, mh0)
       mhs <- readSTRef mhr
-      unsafeFreeze $ fst mhs
+      let vout = fst mhs
+      when (dir == Inverse) $ do
+        let s = 1.0 / fromIntegral n :+ 0
+        CM.forM_ [0..n-1] $ \i -> do
+          x <- MV.unsafeRead vout i
+          MV.unsafeWrite vout i $ s * x
+      unsafeFreeze vout
 
     -- Multiple base transform application for "bottom" of algorithm.
     multBase :: MVCD s -> MVCD s -> ST s ()
