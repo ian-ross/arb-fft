@@ -123,14 +123,14 @@ applyBase (SpecialBase sz) sign mhin mhout =
     Nothing -> error "invalid problem size for SpecialBase"
 
 -- Rader prime-length FFT.
-applyBase (RaderBase sz outperm bfwd binv convsz convplan) sign mhin mhout = do
+applyBase (RaderBase sz outperm bfwd binv pad csz cplan) sign mhin mhout = do
   -- Padding size.
-  let pad = convsz - (sz - 1)
+  let pad = csz - (sz - 1)
 
   -- Permuted input vector padded to next greater power of two size
   -- for fast convolution.
-  apad <- MV.replicate convsz 0
-  forM_ (enumFromN 0 convsz) $ \i -> do
+  apad <- MV.replicate csz 0
+  forM_ (enumFromN 0 csz) $ \i -> do
     val <- if i == 0 then MV.unsafeRead mhin 1
            else if i > pad
                 then MV.unsafeRead mhin $ i - pad + 1
@@ -139,8 +139,8 @@ applyBase (RaderBase sz outperm bfwd binv convsz convplan) sign mhin mhout = do
 
   -- FFT-based convolution calculation.
   apadfr <- unsafeFreeze apad
-  let conv = execute convplan Inverse $
-             zipWith (*) (execute convplan Forward apadfr)
+  let conv = execute cplan Inverse $
+             zipWith (*) (execute cplan Forward apadfr)
                          (if sign == 1 then bfwd else binv)
 
   -- Input vector sum.

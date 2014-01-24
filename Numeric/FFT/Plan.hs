@@ -47,7 +47,7 @@ plan 1 = return $ Plan V.empty Nothing (SpecialBase 1)
 plan n = do
   wis <- readWisdom n
   let fixRader p = case plBase p of
-        bpl@(RaderBase _ _ _ _ csz _) -> do
+        bpl@(RaderBase _ _ _ _ _ csz _) -> do
           cplan <- liftIO $ plan csz
           return $ p { plBase = bpl { raderConvPlan = cplan } }
         _ -> return p
@@ -73,6 +73,18 @@ plan n = do
         liftIO $ writeWisdom n resp rest
         liftIO $ planFromFactors n resp
   fixRader pret
+
+-- | Get execution time for plan for a given problem size.
+planTime :: Int -> IO Double
+planTime n = do
+  wis <- readWisdom n
+  case wis of
+    Just (_, t) -> return t
+    Nothing -> do
+      -- Force generation of wisdom if it's not already there.
+      _ <- plan n
+      Just (_, t) <- readWisdom n
+      return t
 
 -- | Plan calculation for a given problem factorisation.
 planFromFactors :: Int -> (Int, Vector Int) -> IO Plan
@@ -173,25 +185,41 @@ makeRaderBase sz = do
   -- Forward FFT with embedded plan calculation.
   let fft p xs = execute p Forward xs
 
+  -- Times for unpadded and padded convolution transforms.
+  unpadtime <- planTime sz1
+  padtime <- planTime pow2sz
+
+  -- Should we use a padded or an unpadded transform for the
+  -- convolution?
+  let pad = padtime < unpadtime
+      csz = if pad then pow2sz else sz1
+
   -- Plan for convolution transforms.
   cplan <- plan csz
 
-  -- Root of unity powers cyclically repeated to make vector of next
-  -- power of two length for fast convolution and FFT transformed for
-  -- use in convolution, one for forward transform and one for inverse
-  -- transform.
-  let bpad = fft cplan $ generate csz (\idx -> bs ! (idx `mod` sz1))
-      bpadinv = fft cplan $ generate csz (\idx -> bsinv ! (idx `mod` sz1))
+  -- FFT transforms of b sequences for use in convolution, one for
+  -- forward transform and one for inverse transform.  Either just the
+  -- basic root of unity powers for the convolution (if we're not
+  -- padding), or the powers cyclically repeated to make a vector of
+  -- the next power-of-two length.
+  let convb =
+        fft cplan $ if pad
+                    then generate csz (\idx -> bs ! (idx `mod` sz1))
+                    else bs
+      convbinv =
+        fft cplan $ if pad
+                    then generate csz (\idx -> bsinv ! (idx `mod` sz1))
+                    else bsinv
 
-  return (RaderBase sz outperm bpad bpadinv csz cplan, Just inperm)
+  return (RaderBase sz outperm convb convbinv pad csz cplan, Just inperm)
   where
     -- Convolution length.
     sz1 = sz - 1
 
     -- Convolution length padded to next greater power of two.
-    csz = if sz1 == 2^(log2 sz1)
-          then sz1
-          else 2 ^ (1 + log2 (2 * sz1 - 3))
+    pow2sz = if sz1 == 2^(log2 sz1)
+             then sz1
+             else 2 ^ (1 + log2 (2 * sz1 - 3))
 
     -- Group generator and inverse group generator.
     g = primitiveRoot sz
