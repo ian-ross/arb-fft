@@ -47,7 +47,7 @@ plan 1 = return $ Plan V.empty Nothing (SpecialBase 1)
 plan n = do
   wis <- readWisdom n
   let fixRader p = case plBase p of
-        bpl@(RaderBase _ _ _ _ _ csz _) -> do
+        bpl@(RaderBase _ _ _ _ csz _) -> do
           cplan <- liftIO $ plan csz
           return $ p { plBase = bpl { raderConvPlan = cplan } }
         _ -> return p
@@ -211,7 +211,7 @@ makeRaderBase sz = do
                     then generate csz (\idx -> bsinv ! (idx `mod` sz1))
                     else bsinv
 
-  return (RaderBase sz outperm convb convbinv pad csz cplan, Just inperm)
+  return (RaderBase sz outperm convb convbinv csz cplan, Just inperm)
   where
     -- Convolution length.
     sz1 = sz - 1

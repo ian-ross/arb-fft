@@ -41,8 +41,7 @@ execute (Plan dlinfo perm base) dir h =
     n = length h              -- Input vector length.
     bsize = baseSize base     -- Size of base transform.
 
-    -- Root of unity sign and output rescaling.
-    -- Root of unity sign and output rescaling.
+    -- Root of unity sign.
     sign = case dir of
       Forward -> 1
       Inverse -> -1
@@ -68,6 +67,52 @@ execute (Plan dlinfo perm base) dir h =
           x <- MV.unsafeRead vout i
           MV.unsafeWrite vout i $ s * x
       unsafeFreeze vout
+
+    -- Multiple base transform application for "bottom" of algorithm.
+    multBase :: MVCD s -> MVCD s -> ST s ()
+    multBase xmin xmout =
+      V.zipWithM_ (applyBase base sign)
+                  (slicemvecs bsize xmin) (slicemvecs bsize xmout)
+
+
+-- | Monadic FFT plan execution driver -- used by Rader's algorithm
+-- for convolutions.
+executeM :: Plan -> Direction -> MVCD s -> MVCD s -> ST s ()
+executeM (Plan dlinfo perm base) dir hin hout =
+  if n == 1
+  then MV.copy hout hin
+  else do
+    htmp <- MV.replicate n 0
+
+    -- Input permutation.
+    case perm of
+      Nothing -> MV.copy htmp hin
+      Just p -> backpermuteM n p hin htmp
+
+    -- Apply Danielson-Lanczos steps and base transform to digit
+    -- reversal ordered input vector.
+    multBase htmp hout
+    mhr <- newSTRef (hout, htmp)
+    V.forM_ dlinfo $ \dlstep -> do
+      (mh0, mh1) <- readSTRef mhr
+      dl sign dlstep mh0 mh1
+      writeSTRef mhr (mh1, mh0)
+    when (odd $ V.length dlinfo) $ MV.copy hout htmp
+
+    -- Output scaling for inverse transform.
+    when (dir == Inverse) $ do
+      let s = 1.0 / fromIntegral n :+ 0
+      forM_ (enumFromN 0 n) $ \i -> do
+        x <- MV.unsafeRead hout i
+        MV.unsafeWrite hout i $ s * x
+  where
+    n = MV.length hin         -- Input vector length.
+    bsize = baseSize base     -- Size of base transform.
+
+    -- Root of unity sign.
+    sign = case dir of
+      Forward -> 1
+      Inverse -> -1
 
     -- Multiple base transform application for "bottom" of algorithm.
     multBase :: MVCD s -> MVCD s -> ST s ()
@@ -136,7 +181,7 @@ applyBase (SpecialBase sz) sign mhin mhout =
     Nothing -> error "invalid problem size for SpecialBase"
 
 -- Rader prime-length FFT.
-applyBase (RaderBase sz outperm bfwd binv pad csz cplan) sign mhin mhout = do
+applyBase (RaderBase sz outperm bfwd binv csz cplan) sign mhin mhout = do
   -- Padding size.
   let pad = csz - (sz - 1)
 
@@ -151,10 +196,14 @@ applyBase (RaderBase sz outperm bfwd binv pad csz cplan) sign mhin mhout = do
     MV.unsafeWrite apad i val
 
   -- FFT-based convolution calculation.
-  apadfr <- unsafeFreeze apad
-  let conv = execute cplan Inverse $
-             zipWith (*) (execute cplan Forward apadfr)
-                         (if sign == 1 then bfwd else binv)
+  convtmp <- MV.replicate csz 0
+  executeM cplan Forward apad convtmp
+  let bmult = if sign == 1 then bfwd else binv
+  forM_ (enumFromN 0 csz) $ \i -> do
+    x <- MV.unsafeRead convtmp i
+    MV.unsafeWrite convtmp i $ x * (bmult ! i)
+  executeM cplan Inverse convtmp apad
+  conv <- unsafeFreeze apad
 
   -- Input vector sum.
   sumhref <- newSTRef 0

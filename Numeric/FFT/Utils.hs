@@ -3,11 +3,14 @@ module Numeric.FFT.Utils
        , allFactors, factors
        , primitiveRoot, invModN, log2, isPow2, dupperm, (%.%)
        , compositions, makeComp, multisetPerms
+       , backpermuteM
        ) where
 
 import Prelude hiding (all, concatMap, dropWhile, enumFromTo,
                        filter, head, length, map, maximum, null, reverse)
 import qualified Prelude as P
+import qualified Control.Monad as CM
+import Control.Monad.ST
 import Data.Bits
 import Data.Complex
 import Data.Vector.Unboxed
@@ -186,3 +189,11 @@ multisetPerms idp = sidp : L.unfoldr step sidp
                   if i <= f
                   then vv ! i
                   else vv ! (n - i + f)
+
+-- | ST monad version of vector permutation.
+backpermuteM :: Int -> VI -> MVCD s -> MVCD s -> ST s ()
+backpermuteM n perm vin vout = do
+  CM.forM_ [0..n-1] $ \i -> do
+    idx <- indexM perm i
+    x <- MV.unsafeRead vin idx
+    MV.unsafeWrite vout i x

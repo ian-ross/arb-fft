@@ -55,7 +55,6 @@ data BaseTransform = SpecialBase { baseSize :: Int }
                                , raderOutPerm :: VI
                                , raderBFwd :: VCD
                                , raderBInv :: VCD
-                               , raderPad :: Bool
                                , raderConvSize :: Int
                                , raderConvPlan :: Plan }
                      -- ^ Prime-length Rader FFT base transform,
@@ -63,9 +62,8 @@ data BaseTransform = SpecialBase { baseSize :: Int }
                      -- (the input index permutation is folded into
                      -- the main input permutation of the full
                      -- transform), pre-transformed Rader b sequence
-                     -- for forward and inverse problems, whether
-                     -- we're padding the convolution, the (padded or
-                     -- not) problem size for Rader sequence
+                     -- for forward and inverse problems, the (padded
+                     -- or not) problem size for Rader sequence
                      -- convolution and a sub-plan (either of size
                      -- baseSize-1 or the next larger power of two)
                      -- for computing the Rader convolution.
