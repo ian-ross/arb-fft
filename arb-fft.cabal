@@ -22,7 +22,7 @@ Library
                     Numeric.FFT.Special.Miscellaneous
                     Numeric.FFT.Types
                     Numeric.FFT.Utils
-  ghc-options:      -O2
+  ghc-options:      -O2 -fllvm
   ghc-prof-options: -auto-all -caf-all
   build-depends:    base                        >= 4.6      && < 5,
                     containers                  >= 0.5.0.0  && < 0.6,
