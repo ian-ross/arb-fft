@@ -1,6 +1,6 @@
 module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
-import Prelude hiding ((++), concatMap, enumFromTo, filter, length, map,
+import Prelude hiding ((++), any, concatMap, enumFromTo, filter, length, map,
                        maximum, null, reverse, scanl, sum, zip, zipWith)
 import qualified Prelude as P
 import Control.Applicative ((<$>))
@@ -255,7 +255,7 @@ bSize (Rader b) = b
 instance Ord BaseType where
   compare (Special _)  (Rader _)    = LT
   compare (Rader _)    (Special _)  = GT
-  compare (Special s1) (Special s2) = compare s1 s2
+  compare (Special s1) (Special s2) = compare s2 s1
   compare (Rader r1)   (Rader r2)   = case (isPow2 $ r1 - 1, isPow2 $ r2 - 1) of
     (True, True) -> compare r1 r2
     (True, False) -> compare r1 (2 * r2)
@@ -273,13 +273,16 @@ instance Ord SPlan where
 -- | Generate test plans for a given input size, sorted in heuristic
 -- order.
 testPlans :: Int -> Int -> [(Int, Vector Int)]
-testPlans n nplans = L.take nplans $
-                     L.map clean $
-                     L.sortBy (comparing Down) $ P.concatMap doone bs
+testPlans n nplans = L.take nplans $ L.map clean $ L.sort okplans
   where vfs = allFactors n
         bs = usableBases n vfs
         doone b = basePlans n vfs b
         clean (SPlan (b, fs)) = (bSize b, fs)
+        allplans = P.concatMap doone bs
+        okplans = case L.filter (not . ridiculous) allplans of
+          [] -> allplans
+          oks -> oks
+        ridiculous (SPlan (_, fs)) = any (> 128) fs
 
 -- | List plans from a single base.
 basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
