@@ -136,6 +136,10 @@ dl sign (wfac, split, dmatp, dmatm) mhin mhout =
     -- Size of each diagonal sub-matrix.
     ns = wfac `div` split
 
+    -- Index vectors.
+    nsidxs = enumFromN 0 ns
+    splitidxs = enumFromN 1 (split-1)
+
     -- Process one duplicate by processing all rows and writing the
     -- results into a single output vector.
     doone :: MVCD s -> MVCD s -> ST s ()
@@ -149,18 +153,21 @@ dl sign (wfac, split, dmatp, dmatm) mhin mhout =
         mult vins vo r first c = do
           let vi = vins V.! c
               dvals = d r c
-          forM_ (enumFromN 0 ns) $ \i -> do
+          forM_ nsidxs $ \i -> do
             xi <- MV.unsafeRead vi i
             xo <- if first then return 0 else MV.unsafeRead vo i
             MV.unsafeWrite vo i (xo + xi * dvals ! i)
         -- Multiply all blocks by the corresponding diagonal
         -- elements in a single row.
         single :: (VMVCD s, VMVCD s) -> Int -> ST s ()
-        single (vis, vos) r =
-          let m = mult vis (vos V.! r) r
-          in do
-            m True 0
-            mapM_ (m False) $ enumFromN 1 (split-1)
+        single (vis, vos) r = do
+          mult vis (vos V.! r) r True 0
+          mapM_ (mult vis (vos V.! r) r False) splitidxs
+        -- single (vis, vos) r =
+        --   let m = mult vis (vos V.! r) r
+        --   in do
+        --     m True 0
+        --     mapM_ (m False) splitidxs
 
 
 -- | Apply a base transform to a single vector.
