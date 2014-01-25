@@ -280,9 +280,11 @@ testPlans n nplans = L.take nplans $ L.map clean $ L.sort okplans
         clean (SPlan (b, fs)) = (bSize b, fs)
         allplans = P.concatMap doone bs
         okplans = case L.filter (not . ridiculous) allplans of
-          [] -> allplans
+          [] -> L.filter (not . reallyRidiculous) allplans
           oks -> oks
         ridiculous (SPlan (_, fs)) = any (> 128) fs
+        reallyRidiculous (SPlan (_, fs)) =
+          any (> 128) $ filter (not . isPrime) fs
 
 -- | List plans from a single base.
 basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
