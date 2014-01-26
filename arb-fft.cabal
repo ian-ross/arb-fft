@@ -12,6 +12,24 @@ build-type:         Simple
 extra-source-files: README.md
 cabal-version:      >=1.10
 
+description:
+  This library provides a pure Haskell complex-to-complex Fast Fourier
+  Transform implementation for arbitrary length input vectors, using a
+  mixed-radix decimation-in-time algorithm with specialised
+  straight-line code for a range of base transform sizes, Rader's
+  algorithm for prime length base transforms, and an empirical
+  optimisation scheme to select a good problem decomposition.
+  .
+
+  This package is probably primarily of pedagogical interest (FFTW is
+  about five times faster for most input sizes).  There is a long
+  series of blog articles describing the development of the package,
+  indexed at <http://www.skybluetrades.net/haskell-fft-index.html>.
+
+source-repository head
+  type:     git
+  location: https://github.com/ian-ross/arb-fft
+
 Library
   exposed-modules:  Numeric.FFT
   other-modules:    Numeric.FFT.Plan
