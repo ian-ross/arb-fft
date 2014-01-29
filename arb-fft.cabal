@@ -2,7 +2,7 @@ name:               arb-fft
 version:            0.1.0.0
 synopsis:           Pure Haskell arbitrary length FFT library
 homepage:           https://github.com/ian-ross/arb-fft
-license:            GPL-3
+license:            BSD3
 license-file:       LICENSE
 author:             Ian Ross
 maintainer:         ian@skybluetrades.net
@@ -20,7 +20,6 @@ description:
   algorithm for prime length base transforms, and an empirical
   optimisation scheme to select a good problem decomposition.
   .
-
   This package is probably primarily of pedagogical interest (FFTW is
   about five times faster for most input sizes).  There is a long
   series of blog articles describing the development of the package,
