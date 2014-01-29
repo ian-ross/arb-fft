@@ -9,7 +9,7 @@ maintainer:         ian@skybluetrades.net
 copyright:          Copyright (2013) Ian Ross
 category:           Math
 build-type:         Custom
-extra-source-files: README.md
+extra-source-files: README.markdown CHANGELOG.markdown
 cabal-version:      >=1.10
 
 description:
