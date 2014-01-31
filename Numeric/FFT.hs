@@ -20,14 +20,24 @@ import Numeric.FFT.Plan
 import Numeric.FFT.Execute
 
 
--- | Forward FFT with embedded plan calculation.
+-- | Forward FFT with embedded plan calculation.  For an input vector
+-- /h/ of length /N/, with entries numbered from 0 to /N - 1/,
+-- calculates the entries in /H/, the discrete Fourier transform of
+-- /h/, as:
+--
+-- <<doc-formulae/fft-formula.svg>>
 fft :: Vector v (Complex Double) =>
        v (Complex Double) -> IO (v (Complex Double))
 fft xs = do
   p <- plan $ length xs
   return $ fftWith p xs
 
--- | Inverse FFT with embedded plan calculation.
+-- | Inverse FFT with embedded plan calculation.  For an input vector
+-- /H/ of length /N/, with entries numbered from 0 to /N - 1/,
+-- representing Fourier amplitudes of a signal, calculates the entries
+-- in /h/, the inverse discrete Fourier transform of /H/, as:
+--
+-- <<doc-formulae/ifft-formula.svg>>
 ifft :: Vector v (Complex Double) =>
         v (Complex Double) -> IO (v (Complex Double))
 ifft xs = do

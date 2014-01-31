@@ -5,3 +5,7 @@ cabal-dev
 *.chi
 *.chs.h
 .virthualenv
+/doc-formulae/fft-formula.aux
+/doc-formulae/fft-formula.log
+/doc-formulae/ifft-formula.aux
+/doc-formulae/ifft-formula.log
