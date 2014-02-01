@@ -1,5 +1,5 @@
 name:               arb-fft
-version:            0.2.0.1
+version:            0.2.0.2
 synopsis:           Pure Haskell arbitrary length FFT library
 homepage:           https://github.com/ian-ross/arb-fft
 license:            BSD3
