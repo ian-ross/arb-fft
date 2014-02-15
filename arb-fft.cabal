@@ -31,7 +31,7 @@ source-repository head
   location: https://github.com/ian-ross/arb-fft
 
 Flag LLVM
-  default: True
+  default: False
   description: Use LLVM build for better performance
 
 Library
