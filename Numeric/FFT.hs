@@ -25,7 +25,7 @@ import Numeric.FFT.Execute
 -- calculates the entries in /H/, the discrete Fourier transform of
 -- /h/, as:
 --
--- <<http://www.skybluetrades.net/images/arb-fft/fft-formula.svg>>
+-- <<doc-formulae/fft-formula.svg>>
 fft :: Vector v (Complex Double) =>
        v (Complex Double) -> IO (v (Complex Double))
 fft xs = do
@@ -37,7 +37,7 @@ fft xs = do
 -- representing Fourier amplitudes of a signal, calculates the entries
 -- in /h/, the inverse discrete Fourier transform of /H/, as:
 --
--- <<http://www.skybluetrades.net/images/arb-fft/ifft-formula.svg>>
+-- <<doc-formulae/ifft-formula.svg>>
 ifft :: Vector v (Complex Double) =>
         v (Complex Double) -> IO (v (Complex Double))
 ifft xs = do
