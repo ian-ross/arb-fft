@@ -9,3 +9,5 @@ cabal-dev
 /doc-formulae/fft-formula.log
 /doc-formulae/ifft-formula.aux
 /doc-formulae/ifft-formula.log
+.cabal-sandbox
+cabal.sandbox.config

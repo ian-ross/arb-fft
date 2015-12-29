@@ -1,6 +1,8 @@
 module Main where
 
-import Criterion.Main
+import Criterion
+import Criterion.Main.Options
+import Criterion.Types
 import Data.Complex
 import Data.Vector
 import qualified Numeric.FFT as FFT
@@ -12,4 +14,5 @@ tstvec sz = generate sz (\i -> let ii = fromIntegral i
 main :: IO ()
 main = do
   p <- FFT.plan 256
-  run (nf (FFT.fftWith p) (tstvec 256)) 1000
+  benchmarkWith (defaultConfig { resamples = 1000 }) 
+    (nf (FFT.fftWith p) (tstvec 256))

@@ -47,12 +47,12 @@ Library
   ghc-prof-options: -auto-all -caf-all
   build-depends:    base                        >= 4.6      && < 5,
                     containers                  >= 0.5.0.0  && < 0.6,
-                    criterion                   >= 0.8.0.0  && < 0.9,
+                    criterion                   >= 1.1      && < 1.2,
                     directory                   >= 1.2.0.1  && < 1.3,
-                    filepath                    >= 1.3.0.1  && < 1.4,
-                    primitive                   >= 0.5.1.0  && < 0.6,
-                    transformers                >= 0.3.0.0  && < 0.4,
-                    vector                      >= 0.10.9.1 && < 0.11
+                    filepath                    >= 1.3.0.1  && < 1.5,
+                    primitive                   >= 0.5.1.0  && < 0.7,
+                    transformers                >= 0.3.0.0  && < 0.5,
+                    vector                      >= 0.10.9.1 && < 0.12
   default-language: Haskell2010
   if flag(LLVM)
     ghc-options:    -O2 -fllvm
@@ -66,8 +66,8 @@ Test-Suite basic-test
   build-depends:    arb-fft,
                     base                        >= 4.6      && < 5,
                     containers                  >= 0.5.0.0  && < 0.6,
-                    vector                      >= 0.10.9.1 && < 0.11,
-                    QuickCheck                  >= 2.6      && < 2.7,
+                    vector                      >= 0.10.9.1 && < 0.12,
+                    QuickCheck                  >= 2.8      && < 2.9,
                     tasty                       >= 0.3,
                     tasty-quickcheck            >= 0.3
   default-language: Haskell2010
@@ -78,6 +78,6 @@ Executable profile-256
   build-depends:    arb-fft,
                     base                        >= 4.6      && < 5,
                     containers                  >= 0.5.0.0  && < 0.6,
-                    vector                      >= 0.10.9.1 && < 0.11,
+                    vector                      >= 0.10.9.1 && < 0.12,
                     criterion
   default-language: Haskell2010

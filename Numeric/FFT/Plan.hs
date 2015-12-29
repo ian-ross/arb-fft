@@ -20,11 +20,9 @@ import System.Directory
 import System.Environment
 import System.FilePath
 import System.IO
-import System.IO.Unsafe (unsafePerformIO)
 import Criterion
-import Criterion.Config
-import Criterion.Monad
-import Criterion.Environment
+import Criterion.Main.Options
+import Criterion.Types
 
 import Numeric.FFT.Types
 import Numeric.FFT.Execute
@@ -35,11 +33,6 @@ import Numeric.FFT.Special
 -- | Number of plans to test empirically.
 nTestPlans :: Int
 nTestPlans = 50
-
--- | Globally shared timing environment.  (Not thread-safe...)
-timingEnv :: IORef (Maybe Environment)
-timingEnv = unsafePerformIO (newIORef Nothing)
-{-# NOINLINE timingEnv #-}
 
 -- | Plan calculation for a given problem size.
 plan :: Int -> IO Plan
@@ -52,26 +45,20 @@ plan n = do
           return $ p { plBase = bpl { raderConvPlan = cplan } }
         _ -> return p
   pret <- case wis of
-    Just (p, t) -> planFromFactors n p
+    Just (p, _) -> planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
-      withConfig (defaultConfig { cfgVerbosity = ljust Quiet
-                                , cfgSamples   = ljust 1 }) $ do
-        menv <- liftIO $ readIORef timingEnv
-        env <- case menv of
-          Just e -> return e
-          Nothing -> do
-            meas <- measureEnvironment
-            liftIO $ writeIORef timingEnv $ Just meas
-            return meas
-        let v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
-        tps <- CM.forM ps $ \p -> do
-          ptest <- liftIO $ planFromFactors n p >>= fixRader
-          ts <- runBenchmark env $ nf (execute ptest Forward) v
-          return (sum ts / fromIntegral (length ts), p)
-        let (rest, resp) = L.minimumBy (compare `on` fst) tps
-        liftIO $ writeWisdom n resp rest
-        liftIO $ planFromFactors n resp
+          cfg = defaultConfig { verbosity = Quiet
+                                , resamples = 1 }
+          v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
+      tps <- CM.forM ps $ \p -> do
+        ptest <- liftIO $ planFromFactors n p >>= fixRader
+        report <- benchmarkWith' cfg (nf (execute ptest Forward) v)
+        let ts = convert $ V.map measTime (reportMeasured report)
+        return (sum ts / fromIntegral (length ts), p)
+      let (rest, resp) = L.minimumBy (compare `on` fst) tps
+      liftIO $ writeWisdom n resp rest
+      liftIO $ planFromFactors n resp
   fixRader pret
 
 -- | Get execution time for plan for a given problem size.

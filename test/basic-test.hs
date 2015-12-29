@@ -4,8 +4,8 @@ module Main where
 import Prelude hiding ((++), length, map, maximum, sum, zipWith)
 import qualified Prelude as P
 import Test.Tasty
-import Test.Tasty.QuickCheck
-import Test.QuickCheck
+import Test.Tasty.QuickCheck hiding (generate)
+import Test.QuickCheck hiding (generate)
 import Test.QuickCheck.Monadic
 import Control.Applicative ((<$>))
 import Data.Complex
