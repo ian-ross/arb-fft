@@ -2,6 +2,7 @@ module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
 import Prelude hiding ((++), any, concatMap, enumFromTo, filter, length, map,
                        maximum, null, reverse, scanl, sum, zip, zipWith)
+import qualified Prelude
 import qualified Prelude as P
 import Control.Applicative ((<$>))
 import qualified Control.Monad as CM
@@ -20,9 +21,9 @@ import System.Directory
 import System.Environment
 import System.FilePath
 import System.IO
-import Criterion
+import Criterion.Measurement (measure)
 import Criterion.Main.Options
-import Criterion.Types
+import Criterion.Types hiding (measure)
 
 import Numeric.FFT.Types
 import Numeric.FFT.Execute
@@ -48,14 +49,14 @@ plan n = do
     Just (p, _) -> planFromFactors n p
     Nothing -> do
       let ps = testPlans n nTestPlans
-          cfg = defaultConfig { verbosity = Quiet
-                                , resamples = 1 }
           v = generate n (\i -> sin (2 * pi * fromIntegral i / 511) :+ 0)
       tps <- CM.forM ps $ \p -> do
         ptest <- liftIO $ planFromFactors n p >>= fixRader
-        report <- benchmarkWith' cfg (nf (execute ptest Forward) v)
-        let ts = convert $ V.map measTime (reportMeasured report)
-        return (sum ts / fromIntegral (length ts), p)
+        let niters = fromIntegral $ 50000 `div` n
+        (meas, _) <- measure (nf (execute ptest Forward) v) niters
+        let t = measTime meas / fromIntegral (measIters meas)
+            iters = measIters meas
+        return (t, p)
       let (rest, resp) = L.minimumBy (compare `on` fst) tps
       liftIO $ writeWisdom n resp rest
       liftIO $ planFromFactors n resp
