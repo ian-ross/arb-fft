@@ -1,3 +1,7 @@
+0.3.0.0
+-------
+* Updates for ghcjs and new Criterion.
+
 0.2.0.2
 -------
 * Fix documentation image links.
