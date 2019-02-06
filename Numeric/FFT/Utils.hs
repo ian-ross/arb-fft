@@ -96,8 +96,8 @@ primes :: Integral a => [a]
 primes = 2 : primes'
   where primes' = sieve [3, 5 ..] 9 primes'
         sieve (x:xs) q ps@ ~(p:t)
-          | x < q = x : sieve xs q ps
-          | True  =     sieve [n | n <- xs, rem n p /= 0] (P.head t^2) t
+          | x < q     = x : sieve xs q ps
+          | otherwise =     sieve [n | n <- xs, rem n p /= 0] (P.head t^2) t
 
 -- | Naive primality testing.
 isPrime :: Integral a => a -> Bool
@@ -161,7 +161,7 @@ makeComp fs i = fromList $ foldOps (toList fs) $ makeOps (length fs) i
         makeOps :: Int -> Int -> [Bool]
         makeOps n i = P.replicate (n - 1 - P.length bs) False P.++ bs
           where bs = P.dropWhile not $ P.reverse $
-                     P.map (testBit i) [0..bitSize i-1]
+                     P.map (testBit i) [0..finiteBitSize i-1]
 
 -- | Generate all distinct permutations of a multiset in lexicographic
 -- order.
@@ -192,7 +192,7 @@ multisetPerms idp = sidp : L.unfoldr step sidp
 
 -- | ST monad version of vector permutation.
 backpermuteM :: Int -> VI -> MVCD s -> MVCD s -> ST s ()
-backpermuteM n perm vin vout = do
+backpermuteM n perm vin vout =
   CM.forM_ [0..n-1] $ \i -> do
     idx <- indexM perm i
     x <- MV.unsafeRead vin idx

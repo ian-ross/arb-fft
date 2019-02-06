@@ -107,7 +107,7 @@ planFromFactors n (lastf, fs) = do
           w = omega $ sign * wfac
       in V.generate split $
          \r -> V.generate split $
-           \c -> map (w^(ns*r*c) *) $ map ((w^^) . (c *)) $ enumFromN 0 ns
+           \c -> map ((w^(ns*r*c) *) . ((w^^) . (c *))) $ enumFromN 0 ns
 
 -- | Read from wisdom for a given problem size.
 readWisdom :: Int -> IO (Maybe ((Int, Vector Int), Double))
@@ -115,12 +115,11 @@ readWisdom n = do
   home <- getEnv "HOME"
   let wisf = home </> ".fft-plan" </> show n
   ex <- doesFileExist wisf
-  case ex of
-    False -> return Nothing
-    True -> do
-      wist <- readFile wisf
-      let ((wisb, wisfs), wistim) = read wist :: ((Int, [Int]), Double)
-      return $ Just ((wisb, fromList wisfs), wistim)
+  if ex then
+    (do wist <- readFile wisf
+        let ((wisb, wisfs), wistim) = read wist :: ((Int, [Int]), Double)
+        return $ Just ((wisb, fromList wisfs), wistim))
+    else return Nothing
 
 -- | Write wisdom for a given problem size.
 writeWisdom :: Int -> (Int, Vector Int) -> Double -> IO ()
@@ -205,7 +204,7 @@ makeRaderBase sz = do
     sz1 = sz - 1
 
     -- Convolution length padded to next greater power of two.
-    pow2sz = if sz1 == 2^(log2 sz1)
+    pow2sz = if sz1 == 2^ log2 sz1
              then sz1
              else 2 ^ (1 + log2 (2 * sz1 - 3))
 
@@ -279,7 +278,7 @@ basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
 basePlans n vfs bt = if null lfs
                      then [SPlan (bt, empty)]
                      else P.map (\v -> SPlan (bt, v)) $ leftOvers lfs
-  where lfs = fromList $ (toList vfs) \\ (toList $ allFactors b)
+  where lfs = fromList $ toList vfs \\ toList (allFactors b)
         b = bSize bt
 
 -- | Produce all distinct permutations and compositions constructable

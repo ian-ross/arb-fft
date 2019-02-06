@@ -1,0 +1,3 @@
+flags: +llvm
+tests: True
+optimization: 2

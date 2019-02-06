@@ -22,9 +22,9 @@ import Numeric.FFT.Special
 
 -- | Main FFT plan execution driver.
 execute :: Plan -> Direction -> VCD -> VCD
-execute (Plan dlinfo perm base) dir h =
-  if n == 1 then h else if V.null dlinfo
-                        then runST $ do
+execute (Plan dlinfo perm base) dir h
+  | n == 1 = h
+  | V.null dlinfo = runST $ do
                           mhin <- case perm of
                             Nothing -> thaw h
                             Just p -> unsafeThaw $ backpermute h p
@@ -36,7 +36,7 @@ execute (Plan dlinfo perm base) dir h =
                               x <- MV.unsafeRead mhout i
                               MV.unsafeWrite mhout i $ s * x
                           unsafeFreeze mhout
-                        else fullfft
+  | otherwise=  fullfft
   where
     n = length h              -- Input vector length.
     bsize = baseSize base     -- Size of base transform.
