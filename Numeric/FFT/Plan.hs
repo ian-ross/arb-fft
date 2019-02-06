@@ -2,17 +2,17 @@ module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
 import Prelude hiding ((++), any, concatMap, enumFromTo, filter, length, map,
                        maximum, null, reverse, scanl, sum, zip, zipWith)
-import qualified Prelude
+--import qualified Prelude
 import qualified Prelude as P
-import Control.Applicative ((<$>))
+--import Control.Applicative ((<$>))
 import qualified Control.Monad as CM
 import Data.Complex
 import Data.Function (on)
-import Data.IORef
+--import Data.IORef
 import qualified Data.IntMap.Strict as IM
-import Data.List (nub, (\\))
+import Data.List ((\\))
 import qualified Data.List as L
-import Data.Ord
+--import Data.Ord
 import qualified Data.Set as S
 import qualified Data.Vector as V
 import Data.Vector.Unboxed
@@ -20,9 +20,9 @@ import Control.Monad.IO.Class
 import System.Directory
 import System.Environment
 import System.FilePath
-import System.IO
+--import System.IO
 import Criterion.Measurement (measure)
-import Criterion.Main.Options
+--import Criterion.Main.Options
 import Criterion.Types hiding (measure)
 
 import Numeric.FFT.Types
@@ -55,7 +55,7 @@ plan n = do
         let niters = fromIntegral $ 50000 `div` n
         (meas, _) <- measure (nf (execute ptest Forward) v) niters
         let t = measTime meas / fromIntegral (measIters meas)
-            iters = measIters meas
+            _iters = measIters meas
         return (t, p)
       let (rest, resp) = L.minimumBy (compare `on` fst) tps
       liftIO $ writeWisdom n resp rest
@@ -275,7 +275,7 @@ testPlans n nplans = L.take nplans $ L.map clean $ L.sort okplans
 
 -- | List plans from a single base.
 basePlans :: Int -> Vector Int -> BaseType -> [SPlan]
-basePlans n vfs bt = if null lfs
+basePlans _n vfs bt = if null lfs
                      then [SPlan (bt, empty)]
                      else P.map (\v -> SPlan (bt, v)) $ leftOvers lfs
   where lfs = fromList $ toList vfs \\ toList (allFactors b)

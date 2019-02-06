@@ -97,7 +97,7 @@ primes = 2 : primes'
   where primes' = sieve [3, 5 ..] 9 primes'
         sieve (x:xs) q ps@ ~(p:t)
           | x < q     = x : sieve xs q ps
-          | otherwise =     sieve [n | n <- xs, rem n p /= 0] (P.head t^2) t
+          | otherwise =     sieve [n | n <- xs, rem n p /= 0] (P.head t^(2::Int)) t
 
 -- | Naive primality testing.
 isPrime :: Integral a => a -> Bool

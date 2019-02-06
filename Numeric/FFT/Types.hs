@@ -3,7 +3,7 @@ module Numeric.FFT.Types
        , Direction (..), Plan (..), BaseTransform (..)
        ) where
 
-import Data.IntMap.Strict (IntMap)
+--import Data.IntMap.Strict (IntMap)
 import Data.Vector.Unboxed
 import qualified Data.Vector as V
 import qualified Data.Vector.Unboxed.Mutable as MV

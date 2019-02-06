@@ -2,17 +2,17 @@
 module Main where
 
 import Prelude hiding ((++), length, map, maximum, sum, zipWith)
-import qualified Prelude as P
+--import qualified Prelude as P
 import Test.Tasty
 import Test.Tasty.QuickCheck hiding (generate)
-import Test.QuickCheck hiding (generate)
+--import Test.QuickCheck hiding (generate)
 import Test.QuickCheck.Monadic
 import Control.Applicative ((<$>))
 import Data.Complex
 import Data.Vector
-import System.IO.Unsafe (unsafePerformIO)
+--import System.IO.Unsafe (unsafePerformIO)
 
-import Debug.Trace
+--import Debug.Trace
 
 import Numeric.FFT
 

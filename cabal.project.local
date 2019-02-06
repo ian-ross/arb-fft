@@ -1,3 +1,6 @@
-flags: +llvm
-tests: True
-optimization: 2
+
+package *
+  ghc-location: ghc
+
+program-locations
+  ghc-location: ghc

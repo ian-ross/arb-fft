@@ -4,14 +4,14 @@ module Numeric.FFT.Special.Miscellaneous
        ) where
 
 import Control.Monad.ST
-import Data.IntMap.Strict (IntMap)
-import qualified Data.IntMap.Strict as IM
+--import Data.IntMap.Strict (IntMap)
+--import qualified Data.IntMap.Strict as IM
 import Data.Complex
-import Data.Vector.Unboxed
+--import Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
 
 import Numeric.FFT.Types
-import Numeric.FFT.Utils
+--import Numeric.FFT.Utils
 
 
 -- | Length 6 hard-coded FFT.

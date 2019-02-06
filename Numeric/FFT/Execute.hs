@@ -2,18 +2,18 @@ module Numeric.FFT.Execute ( execute ) where
 
 import Prelude hiding (concatMap, foldr, length, map, mapM_,
                        null, reverse, sum, zip, zipWith)
-import qualified Prelude as P
+--import qualified Prelude as P
 import Control.Monad (when)
 import qualified Control.Monad as CM
 import Control.Monad.ST
-import Control.Monad.Primitive (PrimMonad)
+--import Control.Monad.Primitive (PrimMonad)
 import Data.Complex
 import Data.STRef
 import qualified Data.Vector as V
 import Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
 import qualified Data.IntMap.Strict as IM
-import qualified Data.Map as M
+--import qualified Data.Map as M
 
 import Numeric.FFT.Types
 import Numeric.FFT.Utils

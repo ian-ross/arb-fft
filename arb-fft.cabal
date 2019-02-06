@@ -75,6 +75,10 @@ Test-Suite basic-test
                     tasty                       >= 0.3,
                     tasty-quickcheck            >= 0.3
   default-language: Haskell2010
+  if flag(LLVM)
+    ghc-options:    -O2 -fllvm -Wall
+  else
+    ghc-options:    -O2 -Wall
 
 Executable profile-256
   hs-source-dirs:   test
@@ -85,3 +89,8 @@ Executable profile-256
                     vector                      >= 0.10.9.1,
                     criterion
   default-language: Haskell2010
+  if flag(LLVM)
+    ghc-options:    -O2 -fllvm -Wall
+  else
+    ghc-options:    -O2 -Wall
+

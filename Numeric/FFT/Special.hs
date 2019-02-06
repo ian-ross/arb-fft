@@ -7,9 +7,9 @@ import Prelude hiding (filter, maximum)
 import Control.Monad.ST
 import Data.IntMap.Strict (IntMap)
 import qualified Data.IntMap.Strict as IM
-import Data.Complex
+--import Data.Complex
 import Data.Vector.Unboxed
-import qualified Data.Vector.Unboxed.Mutable as MV
+--import qualified Data.Vector.Unboxed.Mutable as MV
 
 import Numeric.FFT.Types
 import Numeric.FFT.Utils
