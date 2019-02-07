@@ -1,6 +1,2 @@
-
-package *
-  ghc-location: ghc
-
-program-locations
-  ghc-location: ghc
+flags: +llvm
+tests: True

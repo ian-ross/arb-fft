@@ -80,7 +80,8 @@ Test-Suite basic-test
   else
     ghc-options:    -O2 -Wall
 
-Executable profile-256
+Benchmark profile-256
+  type:             exitcode-stdio-1.0
   hs-source-dirs:   test
   main-is:          profile-256.hs
   build-depends:    arb-fft,
@@ -89,8 +90,9 @@ Executable profile-256
                     vector                      >= 0.10.9.1,
                     criterion
   default-language: Haskell2010
+  -- NB: -threaded seems to be slower
   if flag(LLVM)
-    ghc-options:    -O2 -fllvm -Wall
+    ghc-options:    -O2 -fllvm -Wall -rtsopts "-with-rtsopts=-s"
   else
-    ghc-options:    -O2 -Wall
+    ghc-options:    -O2 -Wall -rtsopts "-with-rtsopts=-s"
 
