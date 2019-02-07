@@ -6,20 +6,21 @@ module Numeric.FFT.Utils
        , backpermuteM
        ) where
 
-import Prelude hiding (all, concatMap, dropWhile, enumFromTo,
-                       filter, head, length, map, maximum, null, reverse)
-import qualified Prelude as P
-import qualified Control.Monad as CM
-import Control.Monad.ST
-import Data.Bits
-import Data.Complex
-import Data.Vector.Unboxed
-import qualified Data.Vector as V
+import qualified Control.Monad               as CM
+import           Control.Monad.ST
+import           Data.Bits
+import           Data.Complex
+import           Data.List                   (nub)
+import qualified Data.List                   as L
+import qualified Data.Vector                 as V
+import           Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
-import Data.List (nub)
-import qualified Data.List as L
+import           Prelude                     hiding (all, concatMap, dropWhile,
+                                              enumFromTo, filter, head, length,
+                                              map, maximum, null, reverse)
+import qualified Prelude                     as P
 
-import Numeric.FFT.Types
+import           Numeric.FFT.Types
 
 
 -- | Roots of unity.
@@ -170,7 +171,7 @@ multisetPerms idp = sidp : L.unfoldr step sidp
   where sidp = fromList $ L.sort $ toList idp
         step v = case permStep v of
           Nothing -> Nothing
-          Just p -> Just (p, p)
+          Just p  -> Just (p, p)
         permStep :: Vector Int -> Maybe (Vector Int)
         permStep v =
           if null ks

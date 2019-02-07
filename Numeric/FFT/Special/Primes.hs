@@ -1,15 +1,11 @@
 module Numeric.FFT.Special.Primes
        ( special3, special5, special7, special11, special13 ) where
 
-import Control.Monad.ST
---import Data.IntMap.Strict (IntMap)
---import qualified Data.IntMap.Strict as IM
-import Data.Complex
---import Data.Vector.Unboxed
+import           Control.Monad.ST
+import           Data.Complex
 import qualified Data.Vector.Unboxed.Mutable as MV
 
-import Numeric.FFT.Types
---import Numeric.FFT.Utils
+import           Numeric.FFT.Types
 
 
 -- | Length 3 hard-coded FFT.

@@ -2,15 +2,11 @@ module Numeric.FFT.Special.PowersOfTwo
        ( special2, special4, special8, special16, special32, special64
        ) where
 
-import Control.Monad.ST
---import Data.IntMap.Strict (IntMap)
---import qualified Data.IntMap.Strict as IM
-import Data.Complex
---import Data.Vector.Unboxed
+import           Control.Monad.ST
+import           Data.Complex
 import qualified Data.Vector.Unboxed.Mutable as MV
 
-import Numeric.FFT.Types
---import Numeric.FFT.Utils
+import           Numeric.FFT.Types
 
 
 -- | Length 2 hard-coded FFT.

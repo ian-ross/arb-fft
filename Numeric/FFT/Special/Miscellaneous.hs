@@ -3,15 +3,11 @@ module Numeric.FFT.Special.Miscellaneous
        , special15, special20, special25
        ) where
 
-import Control.Monad.ST
---import Data.IntMap.Strict (IntMap)
---import qualified Data.IntMap.Strict as IM
-import Data.Complex
---import Data.Vector.Unboxed
+import           Control.Monad.ST
+import           Data.Complex
 import qualified Data.Vector.Unboxed.Mutable as MV
 
-import Numeric.FFT.Types
---import Numeric.FFT.Utils
+import           Numeric.FFT.Types
 
 
 -- | Length 6 hard-coded FFT.

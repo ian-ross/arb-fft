@@ -1,34 +1,30 @@
 module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
-import Prelude hiding ((++), any, concatMap, enumFromTo, filter, length, map,
-                       maximum, null, reverse, scanl, sum, zip, zipWith)
---import qualified Prelude
-import qualified Prelude as P
---import Control.Applicative ((<$>))
-import qualified Control.Monad as CM
-import Data.Complex
-import Data.Function (on)
---import Data.IORef
-import qualified Data.IntMap.Strict as IM
-import Data.List ((\\))
-import qualified Data.List as L
---import Data.Ord
-import qualified Data.Set as S
-import qualified Data.Vector as V
-import Data.Vector.Unboxed
-import Control.Monad.IO.Class
-import System.Directory
-import System.Environment
-import System.FilePath
---import System.IO
-import Criterion.Measurement (measure)
---import Criterion.Main.Options
-import Criterion.Types hiding (measure)
+import qualified Control.Monad          as CM
+import           Control.Monad.IO.Class
+import           Criterion.Measurement  (measure)
+import           Criterion.Types        hiding (measure)
+import           Data.Complex
+import           Data.Function          (on)
+import qualified Data.IntMap.Strict     as IM
+import           Data.List              ((\\))
+import qualified Data.List              as L
+import qualified Data.Set               as S
+import qualified Data.Vector            as V
+import           Data.Vector.Unboxed
+import           Prelude                hiding (any, concatMap, enumFromTo,
+                                         filter, length, map, maximum, null,
+                                         reverse, scanl, sum, zip, zipWith,
+                                         (++))
+import qualified Prelude                as P
+import           System.Directory
+import           System.Environment
+import           System.FilePath
 
-import Numeric.FFT.Types
-import Numeric.FFT.Execute
-import Numeric.FFT.Utils
-import Numeric.FFT.Special
+import           Numeric.FFT.Execute
+import           Numeric.FFT.Special
+import           Numeric.FFT.Types
+import           Numeric.FFT.Utils
 
 
 -- | Number of plans to test empirically.
@@ -233,7 +229,7 @@ newtype SPlan = SPlan (BaseType, Vector Int) deriving (Eq, Show)
 -- | Base transform size.
 bSize :: BaseType -> Int
 bSize (Special b) = b
-bSize (Rader b) = b
+bSize (Rader b)   = b
 
 -- | Heuristic ordering for base transform types: special bases come
 -- first, then prime bases using Rader's algorithm, ordered according
@@ -244,9 +240,9 @@ instance Ord BaseType where
   compare (Rader _)    (Special _)  = GT
   compare (Special s1) (Special s2) = compare s2 s1
   compare (Rader r1)   (Rader r2)   = case (isPow2 $ r1 - 1, isPow2 $ r2 - 1) of
-    (True, True) -> compare r1 r2
-    (True, False) -> compare r1 (2 * r2)
-    (False, True) -> compare (2 * r1) r2
+    (True, True)   -> compare r1 r2
+    (True, False)  -> compare r1 (2 * r2)
+    (False, True)  -> compare (2 * r1) r2
     (False, False) -> compare r1 r2
 
 -- | Heuristic ordering for full plans, based first on base type, then
@@ -267,7 +263,7 @@ testPlans n nplans = L.take nplans $ L.map clean $ L.sort okplans
         clean (SPlan (b, fs)) = (bSize b, fs)
         allplans = P.concatMap doone bs
         okplans = case L.filter (not . ridiculous) allplans of
-          [] -> L.filter (not . reallyRidiculous) allplans
+          []  -> L.filter (not . reallyRidiculous) allplans
           oks -> oks
         ridiculous (SPlan (_, fs)) = any (> 128) fs
         reallyRidiculous (SPlan (_, fs)) =
