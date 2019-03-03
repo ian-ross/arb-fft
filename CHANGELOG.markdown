@@ -1,3 +1,7 @@
+0.3.0.1
+-------
+* Updates for cabal 2.4 including relaxation of upper limits and some hlinting
+
 0.3.0.0
 -------
 * Updates for ghcjs and new Criterion.

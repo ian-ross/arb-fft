@@ -6,20 +6,21 @@ module Numeric.FFT.Utils
        , backpermuteM
        ) where
 
-import Prelude hiding (all, concatMap, dropWhile, enumFromTo,
-                       filter, head, length, map, maximum, null, reverse)
-import qualified Prelude as P
-import qualified Control.Monad as CM
-import Control.Monad.ST
-import Data.Bits
-import Data.Complex
-import Data.Vector.Unboxed
-import qualified Data.Vector as V
+import qualified Control.Monad               as CM
+import           Control.Monad.ST
+import           Data.Bits
+import           Data.Complex
+import           Data.List                   (nub)
+import qualified Data.List                   as L
+import qualified Data.Vector                 as V
+import           Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
-import Data.List (nub)
-import qualified Data.List as L
+import           Prelude                     hiding (all, concatMap, dropWhile,
+                                              enumFromTo, filter, head, length,
+                                              map, maximum, null, reverse)
+import qualified Prelude                     as P
 
-import Numeric.FFT.Types
+import           Numeric.FFT.Types
 
 
 -- | Roots of unity.
@@ -96,8 +97,8 @@ primes :: Integral a => [a]
 primes = 2 : primes'
   where primes' = sieve [3, 5 ..] 9 primes'
         sieve (x:xs) q ps@ ~(p:t)
-          | x < q = x : sieve xs q ps
-          | True  =     sieve [n | n <- xs, rem n p /= 0] (P.head t^2) t
+          | x < q     = x : sieve xs q ps
+          | otherwise =     sieve [n | n <- xs, rem n p /= 0] (P.head t^(2::Int)) t
 
 -- | Naive primality testing.
 isPrime :: Integral a => a -> Bool
@@ -161,7 +162,7 @@ makeComp fs i = fromList $ foldOps (toList fs) $ makeOps (length fs) i
         makeOps :: Int -> Int -> [Bool]
         makeOps n i = P.replicate (n - 1 - P.length bs) False P.++ bs
           where bs = P.dropWhile not $ P.reverse $
-                     P.map (testBit i) [0..bitSize i-1]
+                     P.map (testBit i) [0..finiteBitSize i-1]
 
 -- | Generate all distinct permutations of a multiset in lexicographic
 -- order.
@@ -170,7 +171,7 @@ multisetPerms idp = sidp : L.unfoldr step sidp
   where sidp = fromList $ L.sort $ toList idp
         step v = case permStep v of
           Nothing -> Nothing
-          Just p -> Just (p, p)
+          Just p  -> Just (p, p)
         permStep :: Vector Int -> Maybe (Vector Int)
         permStep v =
           if null ks
@@ -192,7 +193,7 @@ multisetPerms idp = sidp : L.unfoldr step sidp
 
 -- | ST monad version of vector permutation.
 backpermuteM :: Int -> VI -> MVCD s -> MVCD s -> ST s ()
-backpermuteM n perm vin vout = do
+backpermuteM n perm vin vout =
   CM.forM_ [0..n-1] $ \i -> do
     idx <- indexM perm i
     x <- MV.unsafeRead vin idx

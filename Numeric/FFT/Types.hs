@@ -3,11 +3,10 @@ module Numeric.FFT.Types
        , Direction (..), Plan (..), BaseTransform (..)
        ) where
 
-import Data.IntMap.Strict (IntMap)
-import Data.Vector.Unboxed
-import qualified Data.Vector as V
+import           Data.Complex
+import qualified Data.Vector                 as V
+import           Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
-import Data.Complex
 
 
 -- | Some useful type synonyms.
@@ -25,7 +24,7 @@ data Direction = Forward | Inverse deriving (Eq, Show)
 -- | A FFT plan.  This depends only on the problem size and can be
 -- pre-computed and reused to transform (and inverse transform) any
 -- number of vectors of the given size.
-data Plan = Plan { plDLInfo :: V.Vector (Int, Int, VVVCD, VVVCD)
+data Plan = Plan { plDLInfo  :: V.Vector (Int, Int, VVVCD, VVVCD)
                    -- ^ Size information and diagonal matrix entries
                    -- for Danielson-Lanczos recursive decomposition of
                    -- problem size.
@@ -33,7 +32,7 @@ data Plan = Plan { plDLInfo :: V.Vector (Int, Int, VVVCD, VVVCD)
                    -- ^ Input vector permutation to use before base
                    -- transformation and recursive Danielson-Lanczos
                    -- composition.
-                 , plBase :: BaseTransform
+                 , plBase    :: BaseTransform
                    -- ^ Base transformation used for each sub-vector
                    -- before performing recursive Danielson-Lanczos
                    -- steps to form the full FFT result.
@@ -51,10 +50,10 @@ data BaseTransform = SpecialBase { baseSize :: Int }
                      -- ^ Simple DFT base transform, giving problem
                      -- size and powers of roots of unity needed for
                      -- transform.
-                   | RaderBase { baseSize :: Int
-                               , raderOutPerm :: VI
-                               , raderBFwd :: VCD
-                               , raderBInv :: VCD
+                   | RaderBase { baseSize      :: Int
+                               , raderOutPerm  :: VI
+                               , raderBFwd     :: VCD
+                               , raderBInv     :: VCD
                                , raderConvSize :: Int
                                , raderConvPlan :: Plan }
                      -- ^ Prime-length Rader FFT base transform,

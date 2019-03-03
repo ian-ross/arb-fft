@@ -3,19 +3,17 @@ module Numeric.FFT.Special
        , specialBaseSizes
        , maxPrimeSpecialBaseSize ) where
 
-import Prelude hiding (filter, maximum)
-import Control.Monad.ST
-import Data.IntMap.Strict (IntMap)
-import qualified Data.IntMap.Strict as IM
-import Data.Complex
-import Data.Vector.Unboxed
-import qualified Data.Vector.Unboxed.Mutable as MV
+import           Control.Monad.ST
+import           Data.IntMap.Strict                (IntMap)
+import qualified Data.IntMap.Strict                as IM
+import           Data.Vector.Unboxed
+import           Prelude                           hiding (filter, maximum)
 
-import Numeric.FFT.Types
-import Numeric.FFT.Utils
-import Numeric.FFT.Special.Primes
-import Numeric.FFT.Special.PowersOfTwo
-import Numeric.FFT.Special.Miscellaneous
+import           Numeric.FFT.Special.Miscellaneous
+import           Numeric.FFT.Special.PowersOfTwo
+import           Numeric.FFT.Special.Primes
+import           Numeric.FFT.Types
+import           Numeric.FFT.Utils
 
 
 -- | Map from input vector lengths to hard-coded FFT transforms for

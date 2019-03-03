@@ -1,20 +1,18 @@
-{-# LANGUAGE ScopedTypeVariables, TypeSynonymInstances, FlexibleInstances #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE ScopedTypeVariables  #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 module Main where
 
-import Prelude hiding ((++), length, map, maximum, sum, zipWith)
-import qualified Prelude as P
-import Test.Tasty
-import Test.Tasty.QuickCheck hiding (generate)
-import Test.QuickCheck hiding (generate)
-import Test.QuickCheck.Monadic
-import Control.Applicative ((<$>))
-import Data.Complex
-import Data.Vector
-import System.IO.Unsafe (unsafePerformIO)
+import           Control.Applicative     ((<$>))
+import           Data.Complex
+import           Data.Vector
+import           Prelude                 hiding (length, map, maximum, sum,
+                                          zipWith, (++))
+import           Test.QuickCheck.Monadic
+import           Test.Tasty
+import           Test.Tasty.QuickCheck   hiding (generate)
 
-import Debug.Trace
-
-import Numeric.FFT
+import           Numeric.FFT
 
 main :: IO ()
 main = defaultMain tests

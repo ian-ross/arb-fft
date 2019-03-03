@@ -8,7 +8,7 @@ import Distribution.Simple.Setup
 checkLLVM :: (GenericPackageDescription, HookedBuildInfo)
           -> ConfigFlags -> IO LocalBuildInfo
 checkLLVM (pkg, hbi) flgs = do
-  let warn = case lookup (FlagName "llvm") $ configConfigurationsFlags flgs of
+  let warn = case lookupFlagAssignment (mkFlagName "llvm") $ configConfigurationsFlags flgs of
         Nothing    -> True
         Just True  -> False
         Just False -> True

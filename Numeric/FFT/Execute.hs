@@ -1,33 +1,31 @@
 module Numeric.FFT.Execute ( execute ) where
 
-import Prelude hiding (concatMap, foldr, length, map, mapM_,
-                       null, reverse, sum, zip, zipWith)
-import qualified Prelude as P
-import Control.Monad (when)
-import qualified Control.Monad as CM
-import Control.Monad.ST
-import Control.Monad.Primitive (PrimMonad)
-import Data.Complex
-import Data.STRef
-import qualified Data.Vector as V
-import Data.Vector.Unboxed
+import           Control.Monad               (when)
+import qualified Control.Monad               as CM
+import           Control.Monad.ST
+import           Data.Complex
+import qualified Data.IntMap.Strict          as IM
+import           Data.STRef
+import qualified Data.Vector                 as V
+import           Data.Vector.Unboxed
 import qualified Data.Vector.Unboxed.Mutable as MV
-import qualified Data.IntMap.Strict as IM
-import qualified Data.Map as M
+import           Prelude                     hiding (concatMap, foldr, length,
+                                              map, mapM_, null, reverse, sum,
+                                              zip, zipWith)
 
-import Numeric.FFT.Types
-import Numeric.FFT.Utils
-import Numeric.FFT.Special
+import           Numeric.FFT.Special
+import           Numeric.FFT.Types
+import           Numeric.FFT.Utils
 
 
 -- | Main FFT plan execution driver.
 execute :: Plan -> Direction -> VCD -> VCD
-execute (Plan dlinfo perm base) dir h =
-  if n == 1 then h else if V.null dlinfo
-                        then runST $ do
+execute (Plan dlinfo perm base) dir h
+  | n == 1 = h
+  | V.null dlinfo = runST $ do
                           mhin <- case perm of
                             Nothing -> thaw h
-                            Just p -> unsafeThaw $ backpermute h p
+                            Just p  -> unsafeThaw $ backpermute h p
                           mhout <- MV.replicate n 0
                           applyBase base sign mhin mhout
                           when (dir == Inverse) $ do
@@ -36,7 +34,7 @@ execute (Plan dlinfo perm base) dir h =
                               x <- MV.unsafeRead mhout i
                               MV.unsafeWrite mhout i $ s * x
                           unsafeFreeze mhout
-                        else fullfft
+  | otherwise=  fullfft
   where
     n = length h              -- Input vector length.
     bsize = baseSize base     -- Size of base transform.
@@ -51,7 +49,7 @@ execute (Plan dlinfo perm base) dir h =
     fullfft = runST $ do
       mhin <- case perm of
             Nothing -> thaw h
-            Just p -> unsafeThaw $ backpermute h p
+            Just p  -> unsafeThaw $ backpermute h p
       mhtmp <- MV.replicate n 0
       multBase mhin mhtmp
       mhr <- newSTRef (mhtmp, mhin)
@@ -87,7 +85,7 @@ executeM (Plan dlinfo perm base) dir hin hout =
     -- Input permutation.
     case perm of
       Nothing -> MV.copy htmp hin
-      Just p -> backpermuteM n p hin htmp
+      Just p  -> backpermuteM n p hin htmp
 
     -- Apply Danielson-Lanczos steps and base transform to digit
     -- reversal ordered input vector.
@@ -184,7 +182,7 @@ applyBase (DFTBase sz wsfwd wsinv) sign mhin mhout = do
 -- Special hard-coded cases.
 applyBase (SpecialBase sz) sign mhin mhout =
   case IM.lookup sz specialBases of
-    Just f -> f sign mhin mhout
+    Just f  -> f sign mhin mhout
     Nothing -> error "invalid problem size for SpecialBase"
 
 -- Rader prime-length FFT.
