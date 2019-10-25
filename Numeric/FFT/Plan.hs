@@ -2,8 +2,8 @@ module Numeric.FFT.Plan ( plan, planFromFactors ) where
 
 import qualified Control.Monad          as CM
 import           Control.Monad.IO.Class
-import           Criterion.Measurement  (measure)
-import           Criterion.Types        hiding (measure)
+import           Criterion.Measurement              (measure)
+import           Criterion.Measurement.Types hiding (measure)
 import           Data.Complex
 import           Data.Function          (on)
 import qualified Data.IntMap.Strict     as IM
