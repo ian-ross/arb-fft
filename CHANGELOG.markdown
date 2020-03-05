@@ -1,3 +1,7 @@
+HEAD
+-------
+* Remove criterion dependency from the library
+
 0.3.0.1
 -------
 * Updates for cabal 2.4 including relaxation of upper limits and some hlinting
